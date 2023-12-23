@@ -29,6 +29,7 @@
 
 # General options
 ARCH ?= riscv64
+ARCH := loongarch64
 PLATFORM ?=
 SMP ?= 1
 MODE ?= release
@@ -37,6 +38,8 @@ V ?=
 
 # App options
 A ?= apps/oscomp
+A := apps/helloworld
+A := apps/c/helloworld
 APP ?= $(A)
 FEATURES ?=
 APP_FEATURES ?=
@@ -44,8 +47,8 @@ RUSTFLAGS ?=
 STRUCT ?= Unikernel
 
 # QEMU options
-BLK ?= y
-NET ?= y
+BLK ?= n
+NET ?= n
 GRAPHIC ?= n
 BUS ?= mmio
 
@@ -115,8 +118,16 @@ else ifeq ($(ARCH), aarch64)
   ACCEL ?= n
   PLATFORM_NAME ?= aarch64-qemu-virt
   TARGET := aarch64-unknown-none-softfloat
+else ifeq ($(ARCH), loongarch64)
+  LOG := debug
+  ACCEL ?= n
+  PLATFORM_NAME ?= loongarch64-qemu-virt
+#   PLATFORM_NAME := loongarch64-2k1000
+  TARGET := loongarch64-unknown-none
+  SMP := 2
+  FEATURES := driver-ramdisk,irq
 else
-  $(error "ARCH" must be one of "x86_64", "riscv64", or "aarch64")
+  $(error "ARCH" must be one of "x86_64", "riscv64", or "aarch64", or "loongarch64")
 endif
 
 export AX_ARCH=$(ARCH)
@@ -130,6 +141,10 @@ export AX_GW=$(GW)
 
 # Binutils
 CROSS_COMPILE ?= $(ARCH)-linux-musl-
+ifeq ($(ARCH), loongarch64)
+  CROSS_COMPILE := $(ARCH)-unknown-linux-gnu-
+endif
+
 CC := $(CROSS_COMPILE)gcc
 AR := $(CROSS_COMPILE)ar
 RANLIB := $(CROSS_COMPILE)ranlib

@@ -144,7 +144,7 @@ pub extern "C" fn rust_main(cpu_id: usize, dtb: usize) -> ! {
     #[cfg(feature = "alloc")]
     init_allocator();
 
-    #[cfg(feature = "paging")]
+    #[cfg(all(feature = "paging", not(target_arch = "loongarch64")))]
     {
         info!("Initialize kernel page table...");
         remap_kernel_memory().expect("remap kernel memoy failed");
@@ -240,6 +240,7 @@ fn init_allocator() {
     }
 }
 
+// LoongArch TODO:
 cfg_if::cfg_if! {
     if #[cfg(feature = "paging")] {
         use axhal::paging::PageTable;

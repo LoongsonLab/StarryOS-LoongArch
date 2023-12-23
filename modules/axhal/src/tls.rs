@@ -68,6 +68,9 @@ cfg_if::cfg_if! {
     } else if #[cfg(target_arch = "riscv64")] {
         const TCB_SIZE: usize = 0;
         const GAP_ABOVE_TP: usize = 0;
+    } else if #[cfg(target_arch = "loongarch64")] {
+        const TCB_SIZE: usize = 0;
+        const GAP_ABOVE_TP: usize = 0;
     }
 }
 
