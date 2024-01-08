@@ -1,4 +1,4 @@
-rm disk.img
+rm -rf disk.img
 dd if=/dev/zero of=disk.img bs=3M count=24
 mkfs.vfat -F 32 disk.img
 mkdir -p mnt

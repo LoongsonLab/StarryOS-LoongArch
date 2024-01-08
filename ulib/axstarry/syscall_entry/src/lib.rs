@@ -3,7 +3,7 @@
 #![feature(doc_auto_cfg)]
 #![feature(naked_functions)]
 #![deny(warnings)]
-#![feature(ip_in_core)]
+//#![feature(ip_in_core)]
 /// 需要手动引入这个库，否则会报错：`#[panic_handler]` function required, but not found.
 extern crate axruntime;
 

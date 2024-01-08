@@ -148,13 +148,17 @@ impl Process {
     }
     /// 根据给定参数创建一个新的进程，作为应用程序初始进程
     pub fn init(args: Vec<String>) -> AxResult<AxTaskRef> {
+        use axlog::info;
         let path = args[0].clone();
         let mut memory_set = MemorySet::new_with_kernel_mapped();
         let page_table_token = memory_set.page_table_token();
         if page_table_token != 0 {
             unsafe {
                 write_page_table_root(page_table_token.into());
-                riscv::register::sstatus::set_sum();
+                let task = current();
+                info!("Cur Task: {}", task.id_name());
+                info!("page_table_token: {:x}",page_table_token);
+                // riscv::register::sstatus::set_sum();
             };
         }
         // 运行gcc程序时需要预先加载的环境变量
@@ -209,6 +213,8 @@ impl Process {
             .lock()
             .insert(new_task.id().as_u64(), Arc::clone(&new_task));
         new_task.set_leader(true);
+
+        info!("Process entry{:?}, stack{:?}", entry, user_stack_bottom);
         let new_trap_frame =
             TrapFrame::app_init_context(entry.as_usize(), user_stack_bottom.as_usize());
         new_task.set_trap_context(new_trap_frame);
@@ -253,7 +259,11 @@ impl Process {
         self.memory_set.lock().unmap_user_areas();
         // 清空用户堆，重置堆顶
         unsafe {
+            #[cfg(target_arch = "riscv")]
             riscv::asm::sfence_vma_all();
+
+            #[cfg(target_arch = "loongarch64")]
+            core::arch::asm!("dbar 0");
         }
 
         // 关闭 `CLOEXEC` 的文件
@@ -298,7 +308,12 @@ impl Process {
             // axhal::arch::write_page_table_root(page_table_token.into());
             unsafe {
                 write_page_table_root(page_table_token.into());
+
+                #[cfg(target_arch = "riscv")]
                 riscv::asm::sfence_vma_all();
+
+                #[cfg(target_arch = "loongarch64")]
+                core::arch::asm!("dbar 0");
             };
             // 清空用户堆，重置堆顶
         }

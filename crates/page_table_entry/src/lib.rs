@@ -38,6 +38,8 @@ bitflags::bitflags! {
         const DEVICE        = 1 << 4;
         /// The memory is uncached.
         const UNCACHED      = 1 << 5;
+        /// The memory is Dirty.
+        const DIRTY         = 1 << 6;
     }
 }
 

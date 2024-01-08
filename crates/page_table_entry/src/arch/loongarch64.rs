@@ -84,6 +84,9 @@ impl From<MappingFlags> for PTEFlags {
         if !f.contains(MappingFlags::DEVICE) {
             ret |= Self::MATL;
         }
+        if f.contains(MappingFlags::DIRTY) {
+            ret |= Self::D;
+        }
         ret
     }
 }
@@ -101,8 +104,12 @@ impl GenericPTE for LA64PTE {
         let flags = PTEFlags::from(flags);
         Self(flags.bits() as u64 | ((paddr.as_usize()) as u64 & Self::PHYS_ADDR_MASK))
     }
+    fn new_fault_page(_is_huge: bool) -> Self {
+        let flags = PTEFlags::V;
+        Self(flags.bits() as u64)
+    }
     fn new_table(paddr: PhysAddr) -> Self {
-        Self(PTEFlags::V.bits() as u64 | ((paddr.as_usize()) as u64 & Self::PHYS_ADDR_MASK))
+        Self((paddr.as_usize() as u64) & Self::PHYS_ADDR_MASK)
     }
     fn paddr(&self) -> PhysAddr {
         PhysAddr::from((self.0 & Self::PHYS_ADDR_MASK) as usize)

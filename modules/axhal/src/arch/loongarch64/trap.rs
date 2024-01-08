@@ -1,6 +1,5 @@
 use super::context::TrapFrame;
 use loongarch64::register::estat::{self, Exception, Trap};
-use crate::arch::loongarch64::unaligned::emulate_load_store_insn;
 
 #[cfg(feature = "monolithic")]
 use super::enable_irqs;
@@ -25,22 +24,24 @@ core::arch::global_asm!(
     trapframe_size = const core::mem::size_of::<TrapFrame>(),
 );
 
-
 fn handle_breakpoint(era: &mut usize) {
     debug!("Exception(Breakpoint) @ {:#x} ", era);
     *era += 4;
 }
 
-fn handle_unaligned(tf: &mut TrapFrame) {
-    unsafe { emulate_load_store_insn(tf) }
-}
-
 #[no_mangle]
 fn loongarch64_trap_handler(tf: &mut TrapFrame, from_user: bool) {
     let estat = estat::read();
+    let DEBUG:bool = false;
+    if (estat.ecode() != 0) && (estat.ecode() != 0xb) && DEBUG {
+        info!("Trap era : 0x{:x}",tf.era);
+        info!("Trap badv: 0x{:x}",tf.badv);
+        info!("Trap sp  : 0x{:x}",tf.regs[3]);
+        info!("Trap ra  : 0x{:x}",tf.regs[1]);
+    }
+    
     match estat.cause() {
         Trap::Exception(Exception::Breakpoint) => handle_breakpoint(&mut tf.era),
-        Trap::Exception(Exception::AddressNotAligned) => handle_unaligned(tf),
         Trap::Interrupt(_) => {
             let irq_num: usize = estat.is().trailing_zeros() as usize;
             crate::trap::handle_irq_extern(irq_num)
@@ -52,12 +53,14 @@ fn loongarch64_trap_handler(tf: &mut TrapFrame, from_user: bool) {
             // jump to next instruction anyway
             tf.era += 4;
             // get system call return value
+            info!("Syscall num:{}", tf.regs[11]);
             let result = handle_syscall(
                 tf.regs[11],
                 [
                     tf.regs[4], tf.regs[5], tf.regs[6], tf.regs[7], tf.regs[8], tf.regs[9],
                 ],
             );
+            info!("Syscall Exit");
             // cx is changed during sys_exec, so we have to call it again
             tf.regs[4] = result as usize;
         }
@@ -67,7 +70,7 @@ fn loongarch64_trap_handler(tf: &mut TrapFrame, from_user: bool) {
             let addr = tf.badv;
             if !from_user {
                 unimplemented!(
-                    "I page fault from kernel, addr: {:X}, sepc: {:X}",
+                    "FetchPageFault from kernel, addr: {:X}, era: {:X}",
                     addr,
                     tf.era
                 );
@@ -79,8 +82,8 @@ fn loongarch64_trap_handler(tf: &mut TrapFrame, from_user: bool) {
         Trap::Exception(Exception::LoadPageFault) => {
             let addr = tf.badv;
             if !from_user {
-                error!("L page fault from kernel, addr: {:#x}", addr);
-                unimplemented!("L page fault from kernel");
+                error!("LoadPageFault from kernel, addr: {:#x}", addr);
+                unimplemented!("LoadPageFault fault from kernel");
             }
             handle_page_fault(addr.into(), MappingFlags::USER | MappingFlags::READ, tf);
         }
@@ -89,15 +92,45 @@ fn loongarch64_trap_handler(tf: &mut TrapFrame, from_user: bool) {
         Trap::Exception(Exception::StorePageFault) => {
             if !from_user {
                 error!(
-                    "S page fault from kernel, addr: {:#x} sepc:{:X}",
+                    "StorePageFault from kernel, addr: {:#x} era:{:X}",
                     tf.badv,
                     tf.era
                 );
-                unimplemented!("S page fault from kernel");
+                unimplemented!("StorePageFault from kernel");
             }
             let addr = tf.badv;
             handle_page_fault(addr.into(), MappingFlags::USER | MappingFlags::WRITE, tf);
         }
+
+
+        #[cfg(feature = "monolithic")]
+        Trap::Exception(Exception::PageModifyFault) => {
+            let addr = tf.badv;
+            handle_page_fault(addr.into(), MappingFlags::USER | MappingFlags::WRITE | MappingFlags::DIRTY, tf);
+        }
+
+        #[cfg(feature = "monolithic")]
+        Trap::Exception(Exception::PagePrivilegeIllegal) => {
+            let addr = tf.badv;
+            if !from_user {
+                error!(
+                    "PagePrivilegeIllegal from kernel, addr: {:#x} era:{:X}",
+                    tf.badv,
+                    tf.era
+                );
+                unimplemented!("PagePrivilegeIllegal from kernel");
+            };
+            handle_page_fault(addr.into(), MappingFlags::USER, tf);
+        }
+
+        #[cfg(feature = "monolithic")]
+        Trap::Exception(Exception::InstructionNotExist) => {
+            let ip =  tf.era as u64;
+            let inst = unsafe {*((ip) as *mut u32)};
+            info!("Illegal Instruction: 0x{:x}, {:x}", ip, inst);
+            panic!("Exit")
+        }
+
         _ => {
             panic!(
                 "Unhandled trap {:?} @ {:#x}:\n{:#x?}",

@@ -76,6 +76,11 @@ pub unsafe fn set_current_task_ptr<T>(ptr: *const T) {
         use tock_registers::interfaces::Writeable;
         aarch64_cpu::registers::SP_EL0.set(ptr as u64)
     }
+    #[cfg(target_arch = "loongarch64")]
+    unsafe {
+        let _guard = kernel_guard::IrqSave::new();
+        CURRENT_TASK_PTR.write_current_raw(ptr as usize)
+    }
 }
 
 #[allow(dead_code)]

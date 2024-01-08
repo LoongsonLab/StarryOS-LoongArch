@@ -162,6 +162,8 @@ pub fn init_drivers() -> AllDevices {
         all_devs.add_device(AxDeviceEnum::Block(ram_disk));
     }
 
+     info!("All devices has initialized!");
+
     all_devs.probe();
 
     #[cfg(feature = "net")]

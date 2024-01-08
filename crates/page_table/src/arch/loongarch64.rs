@@ -8,7 +8,7 @@ use page_table_entry::loongarch64::LA64PTE;
 pub struct LA64MetaData;
 
 impl const PagingMetaData for LA64MetaData {
-    const LEVELS: usize = 4;
+    const LEVELS: usize = 3;
     const PA_MAX_BITS: usize = 48;
     const VA_MAX_BITS: usize = 48;
 }

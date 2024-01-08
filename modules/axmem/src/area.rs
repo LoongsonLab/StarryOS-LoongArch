@@ -7,7 +7,6 @@ use axhal::{
 };
 use axio::{Seek, SeekFrom};
 use core::ptr::copy_nonoverlapping;
-use riscv::asm::sfence_vma;
 
 use crate::MemBackend;
 
@@ -103,6 +102,29 @@ impl MapArea {
             self.vaddr <= addr && addr < self.end_va(),
             "Try to handle page fault address out of bound"
         );
+
+        if self.flags.contains(MappingFlags::WRITE) && flags.contains(MappingFlags::DIRTY) {
+            trace!("Page Fault for Modify(Page Table Dirty)");
+            page_table
+                .update(
+                    addr.align_down_4k(),
+                    None,
+                    Some(self.flags | flags)
+                )
+                .expect("Map OverWrite in page fault handler failed");
+            
+            #[cfg(target_arch = "loongarch64")]
+            unsafe {
+                // flush tlb
+                core::arch::asm!(
+                r"
+                invtlb 0x00, $r0, $r0
+                dbar   0
+                ");
+            }
+            return true;
+        }
+
         if !self.flags.contains(flags) {
             error!(
                 "Try to access {:?} memory addr: {:?} with {:?} flag",
@@ -158,7 +180,17 @@ impl MapArea {
             )
             .expect("Map in page fault handler failed");
         unsafe {
+            #[cfg(target_arch = "riscv")]
             sfence_vma(0, addr.align_down_4k().into());
+
+            #[cfg(target_arch = "loongarch64")]
+            {
+                info!("Page Table is Overwritten, flush tlb.");
+                core::arch::asm!(
+                    r"invtlb 0x00, $r0, $r0
+                    dbar 0"
+                );
+            }
         }
         self.pages[page_index] = Some(page);
         true

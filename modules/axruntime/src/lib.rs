@@ -150,11 +150,18 @@ pub extern "C" fn rust_main(cpu_id: usize, dtb: usize) -> ! {
         remap_kernel_memory().expect("remap kernel memoy failed");
     }
 
+    #[cfg(all(feature = "paging", target_arch = "loongarch64"))]
+    {
+        extern "C" { fn img_start();}
+        warn!("IMG: {:p}", img_start as *const());
+    }
+
     info!("Initialize platform devices...");
     axhal::platform_init();
 
     cfg_if::cfg_if! {
         if #[cfg(feature = "monolithic")] {
+            info!("Initialize Kernel Process");
             axprocess::init_kernel_process();
         }
         else {
@@ -246,6 +253,7 @@ cfg_if::cfg_if! {
         use axhal::paging::PageTable;
         use lazy_init::LazyInit;
         pub static KERNEL_PAGE_TABLE: LazyInit<PageTable> = LazyInit::new();
+        #[cfg(all(feature = "paging", not(target_arch = "loongarch64")))]
         fn remap_kernel_memory() -> Result<(), axhal::paging::PagingError> {
             use axhal::mem::{memory_regions, phys_to_virt};
             if axhal::cpu::this_cpu_is_bsp() {

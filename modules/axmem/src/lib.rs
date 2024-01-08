@@ -14,7 +14,6 @@ use core::{
     sync::atomic::{AtomicI32, Ordering},
 };
 use page_table_entry::GenericPTE;
-use riscv::asm::sfence_vma_all;
 use shared::SharedMem;
 use spinlock::SpinNoIrq;
 #[macro_use]
@@ -31,6 +30,8 @@ pub(crate) const REL_PLT: u32 = 7;
 pub(crate) const REL_RELATIVE: u32 = 8;
 pub(crate) const R_RISCV_64: u32 = 2;
 pub(crate) const R_RISCV_RELATIVE: u32 = 3;
+
+pub(crate) const R_LARCH_NONE:u32 = 0;
 
 pub(crate) const AT_PHDR: u8 = 3;
 pub(crate) const AT_PHENT: u8 = 4;
@@ -57,7 +58,7 @@ pub static KEY_TO_SHMID: SpinNoIrq<BTreeMap<i32, i32>> = SpinNoIrq::new(BTreeMap
 /// PageTable + MemoryArea for a process (task)
 pub struct MemorySet {
     page_table: PageTable,
-    owned_mem: BTreeMap<usize, MapArea>,
+    pub owned_mem: BTreeMap<usize, MapArea>,
 
     private_mem: BTreeMap<i32, Arc<SharedMem>>,
     attached_mem: Vec<(VirtAddr, MappingFlags, Arc<SharedMem>)>,
@@ -100,6 +101,27 @@ impl MemorySet {
             private_mem: BTreeMap::new(),
             attached_mem: Vec::new(),
             entry: 0,
+        }
+    }
+
+    pub fn get_map_virt(&mut self, addr: VirtAddr) -> AxResult<VirtAddr> {
+        match self
+            .owned_mem
+            .values_mut()
+            .find(|area| area.vaddr <= addr && addr < area.end_va())
+        {
+            Some(area) => {
+                let page_index = (usize::from(addr) - usize::from(area.vaddr)) / PAGE_SIZE_4K;
+                let page = area.pages[page_index].as_ref().unwrap();
+
+                Ok(VirtAddr::from(page.start_vaddr.as_usize() | (addr.as_usize() & 0xfff)))
+            }
+            None => {
+                #[cfg(target_arch = "loongarch64")]
+                {
+                    panic!("Exit")
+                }
+            }
         }
     }
 
@@ -197,8 +219,9 @@ impl MemorySet {
 
                             let value = sym_val + entry.get_addend() as usize;
                             let addr = base_addr + entry.get_offset() as usize;
+                            let kaddr = self.get_map_virt(VirtAddr::from(addr)).unwrap().as_usize();
 
-                            info!(
+                            trace!(
                                 "write: {:#x} @ {:#x} type = {}",
                                 value,
                                 addr,
@@ -208,7 +231,7 @@ impl MemorySet {
                             unsafe {
                                 copy_nonoverlapping(
                                     value.to_ne_bytes().as_ptr(),
-                                    addr as *mut u8,
+                                    kaddr as *mut u8,
                                     size_of::<usize>() / size_of::<u8>(),
                                 );
                             }
@@ -217,20 +240,27 @@ impl MemorySet {
                             let value = base_addr + entry.get_addend() as usize;
                             let addr = base_addr + entry.get_offset() as usize;
 
-                            // info!(
-                            //     "write: {:#x} @ {:#x} type = {}",
-                            //     value,
-                            //     addr,
-                            //     entry.get_type() as usize
-                            // );
+                            let kaddr = self.get_map_virt(VirtAddr::from(addr)).unwrap().as_usize();
+
+                            trace!(
+                                "write: {:#x} @ {:#x} type = {}",
+                                value,
+                                addr,
+                                entry.get_type() as usize
+                            );
+
+                            // unsafe {info!("Ctx:{:x}", *(self.get_map_virt(VirtAddr::from(0x4039ad0)).unwrap().as_usize()  as *const u64));}
 
                             unsafe {
                                 copy_nonoverlapping(
                                     value.to_ne_bytes().as_ptr(),
-                                    addr as *mut u8,
+                                    kaddr as *mut u8,
                                     size_of::<usize>() / size_of::<u8>(),
                                 );
                             }
+                        }
+                        R_LARCH_NONE => {
+                            trace!("R_LARCH_NONE");
                         }
                         other => panic!("Unknown relocation type: {}", other),
                     }
@@ -269,8 +299,9 @@ impl MemorySet {
 
                         let value = base_addr + sym_val;
                         let addr = base_addr + entry.get_offset() as usize;
+                        let kaddr = self.get_map_virt(VirtAddr::from(addr)).unwrap().as_usize();
 
-                        info!(
+                        trace!(
                             "write: {:#x} @ {:#x} type = {}",
                             value,
                             addr,
@@ -280,7 +311,7 @@ impl MemorySet {
                         unsafe {
                             copy_nonoverlapping(
                                 value.to_ne_bytes().as_ptr(),
-                                addr as *mut u8,
+                                kaddr as *mut u8,
                                 size_of::<usize>(),
                             );
                         }
@@ -301,6 +332,7 @@ impl MemorySet {
         map.insert(AT_PHENT, elf.header.pt2.ph_entry_size() as usize);
         map.insert(AT_PHNUM, elf.header.pt2.ph_count() as usize);
         map.insert(AT_RANDOM, 0);
+        map.insert(AT_BASE, base_addr);
         map.insert(AT_PAGESZ, PAGE_SIZE_4K);
         map
     }
@@ -326,7 +358,7 @@ impl MemorySet {
         backend: Option<MemBackend>,
     ) {
         let num_pages = (size + PAGE_SIZE_4K - 1) / PAGE_SIZE_4K;
-
+        trace!("New Region(Root PAddr): {:x}", self.page_table.root_paddr());
         let area = match data {
             Some(data) => MapArea::new_alloc(
                 vaddr,
@@ -443,13 +475,34 @@ impl MemorySet {
 
         segments.sort();
 
+        let mut mmap_addr = hint.as_usize();
+        let mut find_end:usize = last_end;
+        let mut find_area: bool = false;
+        let mut find_overlap: bool = false;
+
+        info!("Map Addr: 0x{:x?}", mmap_addr);
+
         for (start, end) in segments {
-            if last_end + size <= start {
-                return Some(last_end.into());
+            if mmap_addr <= end {
+                if !find_area && (last_end <= mmap_addr) && ((mmap_addr + size) < start) {
+                    find_overlap = false;
+                    find_end = last_end;
+                    find_area = true;
+                    break;
+                }
+                find_overlap = true;
+                mmap_addr = end;
             }
             last_end = end;
         }
-
+        if find_overlap {
+            debug!("Map Overlap: 0x{:x?}", hint.as_usize());
+        }
+        if find_area {
+            return Some(find_end.into());
+        } else if (mmap_addr+size) <= usize::MAX {
+            return Some(mmap_addr.into());
+        }
         None
     }
 
@@ -479,7 +532,11 @@ impl MemorySet {
 
             self.new_region(start, size, flags, None, backend);
 
+            #[cfg(target_arch = "riscv")]
             unsafe { riscv::asm::sfence_vma_all() };
+
+            #[cfg(target_arch = "loongarch64")]
+            unsafe { core::arch::asm!("dbar 0"); };
 
             start.as_usize() as isize
         } else {
@@ -594,7 +651,12 @@ impl MemorySet {
             assert!(self.owned_mem.insert(area.vaddr.into(), area).is_none());
         }
         unsafe {
-            sfence_vma_all();
+
+            #[cfg(target_arch = "riscv")]
+            riscv::asm::sfence_vma_all();
+
+            #[cfg(target_arch = "loongarch64")]
+            core::arch::asm!("dbar 0");
         }
     }
 
@@ -612,11 +674,21 @@ impl MemorySet {
                 Ok(())
             }
             None => {
+                #[cfg(target_arch = "riscv")]
                 error!(
                     "Page fault address {:?} not found in memory set sepc: {:X?}",
                     addr,
                     riscv::register::sepc::read()
                 );
+                #[cfg(target_arch = "loongarch64")]
+                {
+                    let mut badv:usize;
+                    unsafe { core::arch::asm!("csrrd {}, 0x7", out(reg) badv);}
+                    error!(
+                    "Page fault address {:?} not found in memory set era: {:X?}",
+                    addr, badv );
+                    // panic!("Exit") // for debug
+                }
                 Err(AxError::BadAddress)
             }
         }

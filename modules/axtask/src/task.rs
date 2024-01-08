@@ -746,6 +746,8 @@ impl Deref for CurrentTask {
 pub fn first_into_user(kernel_sp: usize, frame_base: usize) -> ! {
     use axhal::arch::disable_irqs;
 
+    info!("first_into_user");
+
     let trap_frame_size = core::mem::size_of::<TrapFrame>();
     let kernel_base = kernel_sp - trap_frame_size;
     // 在保证将寄存器都存储好之后，再开启中断
@@ -758,6 +760,8 @@ pub fn first_into_user(kernel_sp: usize, frame_base: usize) -> ! {
     // 而当从用户态进入到内核态时，会先将内核栈上的值读取到某一个中间寄存器t0中，然后将tp的值存入内核栈
     // 然后再将t0的值赋给tp，因此此时tp的值是当前任务的CPU ID
     // 对应实现在axhal/src/arch/riscv/trap.S中
+
+    #[cfg(target_arch = "riscv")]
     unsafe {
         riscv::asm::sfence_vma_all();
         core::arch::asm!(
@@ -786,6 +790,28 @@ pub fn first_into_user(kernel_sp: usize, frame_base: usize) -> ! {
             kernel_base = in(reg) kernel_base,
         );
     };
+
+    #[cfg(target_arch = "loongarch64")]
+    unsafe {
+        core::arch::asm!(
+            r"
+            dbar 0
+            move      $sp, {frame_base}
+            move      $t1, {kernel_base}
+            csrwr     {kernel_sp}, 0x30   // save ksp into SAVE0 CSR
+            ld.d      $t0, $sp, 32*8      // prmd
+            csrwr     $t0, 0x1
+            ld.d      $t0, $sp, 33*8      // era
+            csrwr     $t0, 0x6
+            ld.d      $sp, $sp, 3*8       // user sp
+            ertn
+            ",
+            frame_base = in(reg) frame_base,
+            kernel_sp = in(reg) kernel_sp,
+            kernel_base = in(reg) kernel_base,
+        );
+    }
+    
     core::panic!("already in user mode!")
 }
 

@@ -29,8 +29,10 @@ impl TrapFrame {
         let mut trap_frame = TrapFrame::default();
         trap_frame.set_user_sp(user_sp);
         trap_frame.era = app_entry;
-        // trap_frame.sstatus =
-        //     unsafe { (*(&sstatus as *const Sstatus as *const usize) & !(1 << 8)) & !(1 << 1) };
+        trap_frame.prmd = 3 | 1<<2; // user and enable int
+        // info!("app_init_context: TF :0x{:p}", &trap_frame);
+        // info!("app_init_context: SP :0x{:x}", trap_frame.regs[3]);
+        // info!("app_init_context: Era:0x{:x}", trap_frame.era);
         unsafe {
             // a0为参数个数
             // a1存储的是用户栈底，即argv

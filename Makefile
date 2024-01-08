@@ -77,6 +77,7 @@ endif
 
 ifeq ($(STRUCT), Monolithic)
   APP := apps/oscomp
+#   APP := apps/fs/shell
   APP_TYPE := rust
 endif
 
@@ -121,11 +122,15 @@ else ifeq ($(ARCH), aarch64)
   TARGET := aarch64-unknown-none-softfloat
 else ifeq ($(ARCH), loongarch64)
   LOG := debug
+  LOG := info
+#   LOG := warn
   ACCEL ?= n
+  SMP := 1
+  TARGET := loongarch64-unknown-none-softfloat
   PLATFORM_NAME ?= loongarch64-qemu-virt
 #   PLATFORM_NAME := loongarch64-2k1000
-  TARGET := loongarch64-unknown-none
-  SMP := 2
+#   FEATURES := fs
+#   MODE := debug
 else
   $(error "ARCH" must be one of "x86_64", "riscv64", or "aarch64", or "loongarch64")
 endif
@@ -153,6 +158,10 @@ LD := rust-lld -flavor gnu
 OBJDUMP ?= rust-objdump -d --print-imm-hex --x86-asm-syntax=intel
 OBJCOPY ?= rust-objcopy --binary-architecture=$(ARCH)
 GDB ?= gdb-multiarch
+ifeq ($(ARCH), loongarch64)
+  GDB := $(ARCH)-linux-gnu-gdb
+endif
+
 
 # Paths
 OUT_DIR ?= $(APP)

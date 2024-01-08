@@ -1,12 +1,10 @@
-.section .text
-.balign 4096
-.global trap_vector_base
-trap_vector_base:
-    addi.d		$sp, $sp, -{trapframe_size} // allocate space
-    // save the registers.
+.macro SAVE_REGS
     st.d $ra, $sp, 8
     st.d $tp, $sp, 16
-    st.d $sp, $sp, 24
+
+    csrrd $t0, 0x32
+    st.d $t0, $sp, 96
+
     st.d $a0, $sp, 32
     st.d $a1, $sp, 40
     st.d $a2, $sp, 48
@@ -15,7 +13,6 @@ trap_vector_base:
     st.d $a5, $sp, 72
     st.d $a6, $sp, 80
     st.d $a7, $sp, 88
-    st.d $t0, $sp, 96
     st.d $t1, $sp, 104
     st.d $t2, $sp, 112
     st.d $t3, $sp, 120
@@ -35,29 +32,11 @@ trap_vector_base:
     st.d $s6, $sp, 232
     st.d $s7, $sp, 240
     st.d $s8, $sp, 248
+.endm
 
-    csrrd		$t2, 0x1
-    st.d		$t2, $sp, 8*32  // prmd
-    csrrd       $t1, 0x6        
-    st.d        $t1, $sp, 8*33  // era
-    csrrd       $t1, 0x7   
-    st.d        $t1, $sp, 8*34  // badv  
-    csrrd       $t1, 0x0   
-    st.d        $t1, $sp, 8*35  // crmd    
-
-    move $a0, $sp
-    bl loongarch64_trap_handler
-
-
-    // restore the registers.
-    ld.d  $t1, $sp, 8*33  // era
-    csrwr $t1, 0x6
-    ld.d  $t2, $sp, 8*32  // prmd
-    csrwr $t2, 0x1
-
+.macro RESTORE_REGS
     ld.d $ra, $sp, 8
     ld.d $tp, $sp, 16
-    ld.d $sp, $sp, 24
     ld.d $a0, $sp, 32
     ld.d $a1, $sp, 40
     ld.d $a2, $sp, 48
@@ -86,8 +65,86 @@ trap_vector_base:
     ld.d $s6, $sp, 232
     ld.d $s7, $sp, 240
     ld.d $s8, $sp, 248
+.endm
 
-    addi.d $sp, $sp, {trapframe_size}
+
+.section .text
+.balign 4096
+.global trap_vector_base
+trap_vector_base:
+    csrwr       $t0, 0x32
+    csrrd       $t0, 0x1
+    andi        $t0, $t0, 0x3
+    bnez        $t0, .Lfrom_userspace 
+
+.Lfrom_kernel:
+    move        $t0, $sp  
+    addi.d      $sp, $sp, -{trapframe_size} // allocate space
+    // save kernel sp
+    st.d        $t0, $sp, 24
+    b .Lcommon // $t0 save info
+
+.Lfrom_userspace:       
+    csrwr       $sp, 0x33                   // save user sp into SAVE1 CSR
+    csrrd       $sp, 0x30                   // restore kernel sp
+    addi.d      $sp, $sp, -{trapframe_size} // allocate space
+    // save user sp
+    csrrd       $t0, 0x33
+    st.d        $t0, $sp, 24
+     
+.Lcommon:
+    // save the registers.
+    SAVE_REGS
+
+    csrrd		$t2, 0x1
+    st.d		$t2, $sp, 8*32  // prmd
+    csrrd       $t1, 0x6        
+    st.d        $t1, $sp, 8*33  // era
+    csrrd       $t1, 0x7   
+    st.d        $t1, $sp, 8*34  // badv  
+    csrrd       $t1, 0x0   
+    st.d        $t1, $sp, 8*35  // crmd    
+
+    move $a0, $sp
+    csrrd       $t0, 0x1
+    andi        $a1, $t0, 0x3   // if user or kernel
+    bl loongarch64_trap_handler
+
+    // restore the registers.
+    ld.d  $t1, $sp, 8*33  // era
+    csrwr $t1, 0x6
+    ld.d  $t2, $sp, 8*32  // prmd
+    csrwr $t2, 0x1
+
+    RESTORE_REGS
+
+    // restore sp
+    ld.d $sp, $sp, 24
     ertn
 
 
+#define LOONGARCH_CSR_TLBRENTRY     0x88    /* TLB refill exception entry */
+#define LOONGARCH_CSR_TLBRBADV      0x89    /* TLB refill badvaddr */
+#define LOONGARCH_CSR_TLBRERA       0x8a    /* TLB refill ERA */
+#define LOONGARCH_CSR_TLBRSAVE      0x8b    /* KScratch for TLB refill exception */
+#define LOONGARCH_CSR_TLBRELO0      0x8c    /* TLB refill entrylo0 */
+#define LOONGARCH_CSR_TLBRELO1      0x8d    /* TLB refill entrylo1 */
+#define LOONGARCH_CSR_TLBREHI       0x8e    /* TLB refill entryhi */
+
+#define LOONGARCH_CSR_PGDL          0x19    /* Page table base address when VA[47] = 0 */
+#define LOONGARCH_CSR_PGDH          0x1a    /* Page table base address when VA[47] = 1 */
+#define LOONGARCH_CSR_PGD           0x1b    /* Page table base */
+
+.section .text
+.balign 4096
+.global handle_tlb_refill
+handle_tlb_refill:
+    csrwr   $t0, 0x8b
+    csrrd   $t0, 0x1b
+    lddir   $t0, $t0, 3
+    lddir   $t0, $t0, 1
+    ldpte   $t0, 0
+    ldpte   $t0, 1
+    tlbfill
+    csrrd   $t0, 0x8b
+    ertn

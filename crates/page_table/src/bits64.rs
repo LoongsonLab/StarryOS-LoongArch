@@ -70,11 +70,17 @@ impl<M: PagingMetaData, PTE: GenericPTE, IF: PagingIf> PageTable64<M, PTE, IF> {
         page_size: PageSize,
         flags: MappingFlags,
     ) -> PagingResult {
+        #[cfg(target_arch = "loongarch64")]
+        if( vaddr.as_usize() >> 48) == 0x9000 {
+            return Ok(());
+        }
+
         let entry = self.get_entry_mut_or_create(vaddr, page_size)?;
         if !entry.is_unused() {
             return Err(PagingError::AlreadyMapped);
         }
         *entry = GenericPTE::new_page(target.align_down(page_size), flags, page_size.is_huge());
+        trace!("Page PTE: {:x}, f:{:x}, h:{} -> {:x}, {:x}", target.align_down(page_size), flags, page_size.is_huge(), vaddr, target);
         Ok(())
     }
     /// Same as `PageTable64::map()`. This function will error if entry doesn't exist. Should be
@@ -216,6 +222,11 @@ impl<M: PagingMetaData, PTE: GenericPTE, IF: PagingIf> PageTable64<M, PTE, IF> {
                     vaddr, page_size, paddr, e
                 )
             })?;
+            if vaddr.as_usize() == 0x120000000 {
+                let taddr:u64 = paddr.as_usize() as u64 + 0x9000000000000000 + 0x120;
+                let inst = unsafe{*(taddr as *mut u32 )};
+                info!("Context: 0x{:x}: 0x{:x}", taddr, inst);
+            }
             vaddr += page_size as usize;
             paddr += page_size as usize;
             size -= page_size as usize;
@@ -337,7 +348,7 @@ impl<M: PagingMetaData, PTE: GenericPTE, IF: PagingIf> PageTable64<M, PTE, IF> {
     }
 
     fn next_table_mut<'a>(&self, entry: &PTE) -> PagingResult<&'a mut [PTE]> {
-        if !entry.is_present() {
+        if entry.is_present() {
             Err(PagingError::NotMapped)
         } else if entry.is_huge() {
             Err(PagingError::MappedToHugePage)
@@ -350,6 +361,7 @@ impl<M: PagingMetaData, PTE: GenericPTE, IF: PagingIf> PageTable64<M, PTE, IF> {
         if entry.is_unused() {
             let paddr = Self::alloc_table()?;
             self.intrm_tables.push(paddr);
+            // info!("Page Table: 0x{:x}", paddr.as_usize() );
             *entry = GenericPTE::new_table(paddr);
             Ok(self.table_of_mut(paddr))
         } else {
@@ -401,15 +413,17 @@ impl<M: PagingMetaData, PTE: GenericPTE, IF: PagingIf> PageTable64<M, PTE, IF> {
         if page_size == PageSize::Size1G {
             return Ok(p3e);
         }
-
+        trace!("P3e: {:p}", p3e);
         let p2 = self.next_table_mut_or_create(p3e)?;
         let p2e = &mut p2[p2_index(vaddr)];
         if page_size == PageSize::Size2M {
             return Ok(p2e);
         }
 
+        trace!("P2e: {:p}", p2e);
         let p1 = self.next_table_mut_or_create(p2e)?;
         let p1e = &mut p1[p1_index(vaddr)];
+        trace!("P1e: {:p}", p1e);
         Ok(p1e)
     }
 

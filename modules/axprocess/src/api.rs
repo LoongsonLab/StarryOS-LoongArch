@@ -10,7 +10,7 @@ use axerrno::{AxError, AxResult};
 use axhal::mem::VirtAddr;
 use axhal::paging::MappingFlags;
 use axhal::KERNEL_PROCESS_ID;
-use axlog::{debug, info};
+use axlog::{debug, info, trace};
 use axmem::MemorySet;
 #[cfg(feature = "signal")]
 use axsignal::signal_no::SignalNo;
@@ -189,8 +189,9 @@ pub fn time_stat_output() -> (usize, usize, usize, usize) {
 pub fn handle_page_fault(addr: VirtAddr, flags: MappingFlags) {
     axlog::debug!("'page fault' addr: {:?}, flags: {:?}", addr, flags);
     let current_process = current_process();
+    trace!("Cur Task:{}", current().id_name());
     axlog::debug!(
-        "memory token : {}",
+        "memory token : 0x{:x}",
         current_process.memory_set.lock().page_table_token()
     );
 
@@ -200,7 +201,11 @@ pub fn handle_page_fault(addr: VirtAddr, flags: MappingFlags) {
         .handle_page_fault(addr, flags)
         .is_ok()
     {
+        #[cfg(target_arch = "riscv")]
         unsafe { riscv::asm::sfence_vma_all() };
+
+        #[cfg(target_arch = "loongarch64")]
+        unsafe { core::arch::asm!("dbar 0"); };
     } else {
         #[cfg(feature = "signal")]
         let _ = send_signal_to_thread(current().id().as_u64() as isize, SignalNo::SIGSEGV as isize);
