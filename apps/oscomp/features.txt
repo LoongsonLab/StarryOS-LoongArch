@@ -1,6 +1,1 @@
-syscall_fs
-syscall_mem
-syscall_task
-futex
-signal
 img

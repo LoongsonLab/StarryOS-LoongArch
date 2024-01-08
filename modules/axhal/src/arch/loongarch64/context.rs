@@ -3,7 +3,7 @@ use memory_addr::VirtAddr;
 
 /// Saved registers when a trap (interrupt or exception) occurs.
 #[repr(C)]
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct TrapFrame {
     /// All general registers.
     pub regs: [usize; 32],
@@ -15,6 +15,30 @@ pub struct TrapFrame {
     pub badv: usize,
     /// Current Mode Information
     pub crmd: usize,
+}
+
+impl TrapFrame {
+    fn set_user_sp(&mut self, user_sp: usize) {
+        self.regs[3] = user_sp;
+    }
+    /// 用于第一次进入应用程序时的初始化
+    pub fn app_init_context(app_entry: usize, user_sp: usize) -> Self {
+        // let sstatus = sstatus::read();
+        // 当前版本的riscv不支持使用set_spp函数，需要手动修改
+        // 修改当前的sstatus为User，即是第8位置0
+        let mut trap_frame = TrapFrame::default();
+        trap_frame.set_user_sp(user_sp);
+        trap_frame.era = app_entry;
+        // trap_frame.sstatus =
+        //     unsafe { (*(&sstatus as *const Sstatus as *const usize) & !(1 << 8)) & !(1 << 1) };
+        unsafe {
+            // a0为参数个数
+            // a1存储的是用户栈底，即argv
+            trap_frame.regs[4] = *(user_sp as *const usize);
+            trap_frame.regs[5] = *(user_sp as *const usize).add(1) as usize;
+        }
+        trap_frame
+    }
 }
 
 /// Saved hardware states of a task.

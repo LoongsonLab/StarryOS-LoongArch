@@ -45,6 +45,7 @@ FEATURES ?=
 APP_FEATURES ?=
 RUSTFLAGS ?=
 STRUCT ?= Unikernel
+STRUCT := Monolithic
 
 # QEMU options
 BLK ?= n
@@ -125,7 +126,6 @@ else ifeq ($(ARCH), loongarch64)
 #   PLATFORM_NAME := loongarch64-2k1000
   TARGET := loongarch64-unknown-none
   SMP := 2
-  FEATURES := driver-ramdisk,irq
 else
   $(error "ARCH" must be one of "x86_64", "riscv64", or "aarch64", or "loongarch64")
 endif
@@ -175,9 +175,9 @@ else ifeq ($(PLATFORM_NAME), aarch64-bsta1000b)
 endif
 
 make_bin: 
-  ifeq ($(STRUCT), Monolithic)
-		$(call make_bin)
-  endif
+#   ifeq ($(STRUCT), Monolithic)
+# 		$(call make_bin)
+#   endif
 
 build: make_bin $(OUT_DIR) $(OUT_BIN)
 

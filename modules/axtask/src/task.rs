@@ -18,8 +18,12 @@ use axhal::tls::TlsArea;
 use axhal::arch::TaskContext;
 use memory_addr::{align_up_4k, VirtAddr};
 
-#[cfg(feature = "monolithic")]
+
+#[cfg(all(feature = "monolithic", target_arch = "riscv64"))]
 core::arch::global_asm!(include_str!("copy.S"));
+
+#[cfg(all(feature = "monolithic", target_arch = "loongarch64"))]
+core::arch::global_asm!(include_str!("copy-la64.S"));
 
 #[cfg(feature = "monolithic")]
 use axhal::arch::TrapFrame;
