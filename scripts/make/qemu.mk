@@ -24,9 +24,12 @@ qemu_args-aarch64 := \
   -machine virt \
   -kernel $(OUT_BIN)
 
-LOONGARCH_BIOS = tools/la64/loongarch_bios_0310.bin
+# LOONGARCH_BIOS = tools/la64/loongarch_bios_0310.bin
+# qemu_args-loongarch64 := \
+#   -bios $(LOONGARCH_BIOS) \
+#   -kernel $(OUT_ELF)
 qemu_args-loongarch64 := \
-  -bios $(LOONGARCH_BIOS) \
+  -machine virt \
   -kernel $(OUT_ELF)
 
 

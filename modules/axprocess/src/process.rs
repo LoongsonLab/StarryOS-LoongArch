@@ -149,15 +149,16 @@ impl Process {
     /// 根据给定参数创建一个新的进程，作为应用程序初始进程
     pub fn init(args: Vec<String>) -> AxResult<AxTaskRef> {
         use axlog::info;
+        use axlog::warn;
         let path = args[0].clone();
         let mut memory_set = MemorySet::new_with_kernel_mapped();
         let page_table_token = memory_set.page_table_token();
         if page_table_token != 0 {
-            unsafe {
+            {
                 write_page_table_root(page_table_token.into());
                 let task = current();
                 info!("Cur Task: {}", task.id_name());
-                info!("page_table_token: {:x}",page_table_token);
+                warn!("0x{:x}",page_table_token);
                 // riscv::register::sstatus::set_sum();
             };
         }
@@ -263,7 +264,7 @@ impl Process {
             riscv::asm::sfence_vma_all();
 
             #[cfg(target_arch = "loongarch64")]
-            core::arch::asm!("dbar 0");
+            core::arch::asm!("dbar 0; invtlb 0x00, $r0, $r0");
         }
 
         // 关闭 `CLOEXEC` 的文件
@@ -313,7 +314,7 @@ impl Process {
                 riscv::asm::sfence_vma_all();
 
                 #[cfg(target_arch = "loongarch64")]
-                core::arch::asm!("dbar 0");
+                core::arch::asm!("dbar 0; invtlb 0x00, $r0, $r0");
             };
             // 清空用户堆，重置堆顶
         }

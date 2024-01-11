@@ -29,15 +29,20 @@ fn handle_breakpoint(era: &mut usize) {
     *era += 4;
 }
 
+fn dbg_break_point() {
+
+}
+
 #[no_mangle]
 fn loongarch64_trap_handler(tf: &mut TrapFrame, from_user: bool) {
     let estat = estat::read();
-    let DEBUG:bool = false;
-    if (estat.ecode() != 0) && (estat.ecode() != 0xb) && DEBUG {
-        info!("Trap era : 0x{:x}",tf.era);
-        info!("Trap badv: 0x{:x}",tf.badv);
-        info!("Trap sp  : 0x{:x}",tf.regs[3]);
-        info!("Trap ra  : 0x{:x}",tf.regs[1]);
+    if (estat.ecode() != 0) && (estat.ecode() != 0xb) {
+        info!("Trap era : 0x{:x}", tf.era);
+        info!("Trap era");
+        info!("Trap badv: 0x{:x}", tf.badv);
+        info!("Trap sp  : 0x{:x}", tf.regs[3]);
+        info!("Trap ra  : 0x{:x}", tf.regs[1]);
+        info!("Trap code: {:?}", estat.cause());
     }
     
     match estat.cause() {
@@ -49,11 +54,16 @@ fn loongarch64_trap_handler(tf: &mut TrapFrame, from_user: bool) {
 
         #[cfg(feature = "monolithic")]
         Trap::Exception(Exception::Syscall) => {
-            enable_irqs();
+            //enable_irqs();
             // jump to next instruction anyway
             tf.era += 4;
             // get system call return value
             info!("Syscall num:{}", tf.regs[11]);
+
+            if tf.regs[11] == 221 {
+                dbg_break_point();
+            }
+
             let result = handle_syscall(
                 tf.regs[11],
                 [
@@ -107,6 +117,7 @@ fn loongarch64_trap_handler(tf: &mut TrapFrame, from_user: bool) {
         Trap::Exception(Exception::PageModifyFault) => {
             let addr = tf.badv;
             handle_page_fault(addr.into(), MappingFlags::USER | MappingFlags::WRITE | MappingFlags::DIRTY, tf);
+            // panic!("Exit")
         }
 
         #[cfg(feature = "monolithic")]
@@ -150,4 +161,5 @@ fn loongarch64_trap_handler(tf: &mut TrapFrame, from_user: bool) {
     // 在保证将寄存器都存储好之后，再开启中断
     // 否则此时会因为写入csr寄存器过程中出现中断，导致出现异常
     disable_irqs();
+    info!("Trap sp V: 0x{:x}", tf.regs[3]);
 }

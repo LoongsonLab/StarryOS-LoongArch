@@ -7,6 +7,7 @@ use axhal::{
 };
 use axio::{Seek, SeekFrom};
 use core::ptr::copy_nonoverlapping;
+use page_table_entry::GenericPTE;
 
 use crate::MemBackend;
 
@@ -79,6 +80,11 @@ impl MapArea {
             flags,
             backend,
         })
+    }
+
+    pub fn get_page_entry(virt_addr: VirtAddr, page_table: &mut PageTable) -> AxResult<usize> {
+        let (entry, size) = page_table.get_entry_mut(virt_addr).unwrap();
+        Ok(entry.context())
     }
 
     pub fn dealloc(&mut self, page_table: &mut PageTable) {
@@ -179,12 +185,14 @@ impl MapArea {
                 self.flags,
             )
             .expect("Map in page fault handler failed");
+        
         unsafe {
             #[cfg(target_arch = "riscv")]
             sfence_vma(0, addr.align_down_4k().into());
 
             #[cfg(target_arch = "loongarch64")]
             {
+                info!("Vaddr :{:?}, Paddr :{:?}", addr, page.start_vaddr);
                 info!("Page Table is Overwritten, flush tlb.");
                 core::arch::asm!(
                     r"invtlb 0x00, $r0, $r0

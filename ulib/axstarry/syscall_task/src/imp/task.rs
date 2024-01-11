@@ -134,6 +134,7 @@ pub fn syscall_exec(
     if curr_process.exec(path, args_vec, envs_vec).is_err() {
         exit_current_task(0);
     }
+    info!("SysCall exec");
     Ok(argc as isize)
 }
 

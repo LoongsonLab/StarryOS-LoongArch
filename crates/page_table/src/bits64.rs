@@ -223,9 +223,9 @@ impl<M: PagingMetaData, PTE: GenericPTE, IF: PagingIf> PageTable64<M, PTE, IF> {
                 )
             })?;
             if vaddr.as_usize() == 0x120000000 {
-                let taddr:u64 = paddr.as_usize() as u64 + 0x9000000000000000 + 0x120;
+                let taddr:u64 = paddr.as_usize() as u64 + 0x9000000000000000 + 0xb0;
                 let inst = unsafe{*(taddr as *mut u32 )};
-                info!("Context: 0x{:x}: 0x{:x}", taddr, inst);
+                warn!("Context: 0x{:x}: 0x{:x}", taddr, inst);
             }
             vaddr += page_size as usize;
             paddr += page_size as usize;

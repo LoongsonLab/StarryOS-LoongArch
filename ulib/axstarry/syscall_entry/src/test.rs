@@ -12,6 +12,7 @@ use axhal::arch::flush_tlb;
 
 use axhal::KERNEL_PROCESS_ID;
 use axlog::info;
+use axlog::warn;
 use axprocess::link::{create_link, FilePath};
 use axprocess::{wait_pid, yield_now_task, PID2PC};
 
@@ -319,12 +320,13 @@ pub const OSTRAIN_TESTCASES: &[&str] = &[
 
 #[allow(dead_code)]
 pub const SDCARD_TESTCASES: &[&str] = &[
-    "hello",
-    "main",
+    // "hello",
+    // "main",
     // "libc.so",
-    "busybox echo hello",
-    "busybox sh test_hello.sh",
-    // "busybox sh",
+    // "busybox echo hello",
+    // "busybox sh test_hello.sh",
+    // "busybox ls",
+    "busybox sh",
     // "sh",
     // "busybox sh lua_testcode.sh",
     // "./riscv64-linux-musl-native/bin/riscv64-linux-musl-gcc ./hello.c -static",
@@ -417,7 +419,7 @@ impl TestResult {
         }
     }
     pub fn load(&mut self, testcase: &Vec<String>) {
-        info!(
+        warn!(
             " --------------- load testcase: {:?} --------------- ",
             testcase
         );
@@ -428,12 +430,12 @@ impl TestResult {
     pub fn finish_one_test(&mut self, exit_code: i32) {
         match exit_code {
             0 => {
-                info!(" --------------- test passed --------------- ");
+                warn!(" --------------- test passed --------------- ");
                 self.accepted += 1;
                 self.now_testcase.take();
             }
             _ => {
-                info!(
+                warn!(
                     " --------------- TEST FAILED, exit code = {} --------------- ",
                     exit_code
                 );
@@ -541,17 +543,33 @@ pub fn fs_init(_case: &'static str) {
         &(FilePath::new("busybox").unwrap()),
     );
     create_link(
-        &(FilePath::new("/sbin/ls").unwrap()),
+        &(FilePath::new("/usr/sbin/busybox").unwrap()),
+        &(FilePath::new("busybox").unwrap()),
+    );
+    // create_link(
+    //     &(FilePath::new("/sbin/ls").unwrap()),
+    //     &(FilePath::new("busybox").unwrap()),
+    // );
+    create_link(
+        &(FilePath::new("/usr/sbin/ls").unwrap()),
         &(FilePath::new("busybox").unwrap()),
     );
     create_link(
-        &(FilePath::new("/ls").unwrap()),
-        &(FilePath::new("/busybox").unwrap()),
+        &(FilePath::new("/usr/sbin/main").unwrap()),
+        &(FilePath::new("main").unwrap()),
     );
     create_link(
-        &(FilePath::new("/sh").unwrap()),
-        &(FilePath::new("/busybox").unwrap()),
+        &(FilePath::new("/usr/sbin/hello").unwrap()),
+        &(FilePath::new("hello").unwrap()),
     );
+    // create_link(
+    //     &(FilePath::new("/ls").unwrap()),
+    //     &(FilePath::new("/busybox").unwrap()),
+    // );
+    // create_link(
+    //     &(FilePath::new("/sh").unwrap()),
+    //     &(FilePath::new("/busybox").unwrap()),
+    // );
     create_link(
         &(FilePath::new("/bin/lmbench_all").unwrap()),
         &(FilePath::new("/lmbench_all").unwrap()),

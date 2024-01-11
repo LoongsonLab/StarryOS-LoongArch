@@ -55,23 +55,22 @@ pub fn read_page_table_root() -> PhysAddr {
 /// # Safety
 ///
 /// This function is unsafe as it changes the virtual memory address space.
-pub unsafe fn write_page_table_root(root_paddr: PhysAddr) {
+pub fn write_page_table_root(root_paddr: PhysAddr) {
     let old_root = read_page_table_root();
     trace!("set page table root: {:#x} => {:#x}", old_root, root_paddr);
     trace!("ROOT_ADDR: 0x{:x}", root_paddr.as_usize());
     // error:
     // pgdh::set_base(root_paddr.as_usize());
     // pgdl::set_base(root_paddr.as_usize());
-
     // can work:
     unsafe {
         asm!(
+            "dbar  0       ",           // sync
             "csrwr {root_paddr}, 0x19", // PGDL
             "csrwr {root_paddr}, 0x1a", // PGDH
-
-            // when set pgd, MUST flush tlb. becase of old PTE in tlb. 
+            // when set pgd, MUST flush tlb. becase of old PTE in tlb.
             "invtlb 0x00, $r0, $r0   ", // flush tlb
-            "dbar  0       ",           // sync
+            // "dbar  0       ",           // sync
             root_paddr = in(reg) root_paddr.as_usize(),
         )
     }
@@ -84,7 +83,7 @@ pub unsafe fn write_page_table_root(root_paddr: PhysAddr) {
 /// entry that maps the given virtual address.
 #[inline]
 pub fn flush_tlb(_vaddr: Option<VirtAddr>) {
-    unsafe {asm!("invtlb 0x00, $r0, $r0");}
+    unsafe {asm!("dbar 0; invtlb 0x00, $r0, $r0");}
 }
 
 /// Writes Exception Entry Base Address Register (`eentry`).

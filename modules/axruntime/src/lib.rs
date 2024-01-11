@@ -153,7 +153,7 @@ pub extern "C" fn rust_main(cpu_id: usize, dtb: usize) -> ! {
     #[cfg(all(feature = "paging", target_arch = "loongarch64"))]
     {
         extern "C" { fn img_start();}
-        warn!("IMG: {:p}", img_start as *const());
+        error!("IMG: {:p}", img_start as *const());
     }
 
     info!("Initialize platform devices...");

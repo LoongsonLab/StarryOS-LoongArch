@@ -74,4 +74,9 @@ pub trait GenericPTE: Debug + Clone + Copy + Sync + Send + Sized {
     fn is_huge(&self) -> bool;
     /// Set this entry to zero.
     fn clear(&mut self);
+
+    /// Get Context for Debug
+    fn context(&self) -> usize {
+        return 0
+    }
 }

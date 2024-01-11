@@ -205,7 +205,7 @@ pub fn handle_page_fault(addr: VirtAddr, flags: MappingFlags) {
         unsafe { riscv::asm::sfence_vma_all() };
 
         #[cfg(target_arch = "loongarch64")]
-        unsafe { core::arch::asm!("dbar 0"); };
+        unsafe { core::arch::asm!("dbar 0; invtlb 0x00, $r0, $r0"); };
     } else {
         #[cfg(feature = "signal")]
         let _ = send_signal_to_thread(current().id().as_u64() as isize, SignalNo::SIGSEGV as isize);

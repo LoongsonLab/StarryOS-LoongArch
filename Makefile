@@ -126,7 +126,7 @@ else ifeq ($(ARCH), loongarch64)
 #   LOG := warn
   ACCEL ?= n
   SMP := 1
-  TARGET := loongarch64-unknown-none-softfloat
+  TARGET := loongarch64-unknown-none
   PLATFORM_NAME ?= loongarch64-qemu-virt
 #   PLATFORM_NAME := loongarch64-2k1000
 #   FEATURES := fs

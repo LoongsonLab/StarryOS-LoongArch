@@ -139,6 +139,9 @@ impl GenericPTE for LA64PTE {
     fn clear(&mut self) {
         self.0 = 0
     }
+    fn context(&self) -> usize {
+        self.0 as usize
+    }
 }
 
 impl fmt::Debug for LA64PTE {

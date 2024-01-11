@@ -372,6 +372,9 @@ impl MemorySet {
             None => MapArea::new_lazy(vaddr, num_pages, flags, backend, &mut self.page_table),
         };
 
+        //let entry = MapArea::get_page_entry(vaddr, &mut self.page_table).unwrap();
+        //warn!("Vaddr :0x{:x} -> Paddr :0x{:x}", vaddr.as_usize(), entry);
+        //warn!("-------------------------------------------------------");
         debug!(
             "allocating [0x{:x}, 0x{:x}) to [0x{:x}, 0x{:x}) flag: {:?}",
             usize::from(vaddr),
@@ -481,6 +484,7 @@ impl MemorySet {
         let mut find_overlap: bool = false;
 
         info!("Map Addr: 0x{:x?}", mmap_addr);
+        info!("Map Segments: {:x?}", segments);
 
         for (start, end) in segments {
             if mmap_addr <= end {
@@ -536,7 +540,7 @@ impl MemorySet {
             unsafe { riscv::asm::sfence_vma_all() };
 
             #[cfg(target_arch = "loongarch64")]
-            unsafe { core::arch::asm!("dbar 0"); };
+            unsafe { core::arch::asm!("dbar 0; invtlb 0x00, $r0, $r0"); };
 
             start.as_usize() as isize
         } else {
@@ -656,7 +660,7 @@ impl MemorySet {
             riscv::asm::sfence_vma_all();
 
             #[cfg(target_arch = "loongarch64")]
-            core::arch::asm!("dbar 0");
+            core::arch::asm!("dbar 0; invtlb 0x00, $r0, $r0");
         }
     }
 
