@@ -80,7 +80,9 @@ impl<M: PagingMetaData, PTE: GenericPTE, IF: PagingIf> PageTable64<M, PTE, IF> {
             return Err(PagingError::AlreadyMapped);
         }
         *entry = GenericPTE::new_page(target.align_down(page_size), flags, page_size.is_huge());
+        trace!("flags:{:?}", flags);
         trace!("Page PTE: {:x}, f:{:x}, h:{} -> {:x}, {:x}", target.align_down(page_size), flags, page_size.is_huge(), vaddr, target);
+        trace!("PTE:{:x}", entry.context());
         Ok(())
     }
     /// Same as `PageTable64::map()`. This function will error if entry doesn't exist. Should be
@@ -222,10 +224,10 @@ impl<M: PagingMetaData, PTE: GenericPTE, IF: PagingIf> PageTable64<M, PTE, IF> {
                     vaddr, page_size, paddr, e
                 )
             })?;
-            if vaddr.as_usize() == 0x120000000 {
+            if false && (vaddr.as_usize() == 0x120000000) {
                 let taddr:u64 = paddr.as_usize() as u64 + 0x9000000000000000 + 0xb0;
                 let inst = unsafe{*(taddr as *mut u32 )};
-                warn!("Context: 0x{:x}: 0x{:x}", taddr, inst);
+                trace!("Context: 0x{:x}: 0x{:x}", taddr, inst);
             }
             vaddr += page_size as usize;
             paddr += page_size as usize;

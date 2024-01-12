@@ -83,7 +83,7 @@ impl MapArea {
     }
 
     pub fn get_page_entry(virt_addr: VirtAddr, page_table: &mut PageTable) -> AxResult<usize> {
-        let (entry, size) = page_table.get_entry_mut(virt_addr).unwrap();
+        let (entry, _size) = page_table.get_entry_mut(virt_addr).unwrap();
         Ok(entry.context())
     }
 

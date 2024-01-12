@@ -156,9 +156,22 @@ pub fn init_drivers() -> AllDevices {
 
     #[cfg(feature = "img")]
     {
-        use axconfig::{PHYS_VIRT_OFFSET, TESTCASE_MEMORY_SIZE, TESTCASE_MEMORY_START};
+        use axconfig::TESTCASE_MEMORY_SIZE;
         let mut ram_disk = driver_block::ramdisk::RamDisk::new(TESTCASE_MEMORY_SIZE);
-        ram_disk.copy_from_slice((TESTCASE_MEMORY_START + PHYS_VIRT_OFFSET) as *const u8);
+        
+        #[cfg(not(target_arch = "loongarch64"))]
+        {
+            use axconfig::{TESTCASE_MEMORY_START, PHYS_VIRT_OFFSET};
+            ram_disk.copy_from_slice((TESTCASE_MEMORY_START + PHYS_VIRT_OFFSET) as *const u8);
+        }
+        
+
+        #[cfg(target_arch = "loongarch64")]
+        {
+            extern "C" { fn img_start(); }
+            ram_disk.copy_from_slice(img_start as *const u8);
+        }
+        
         all_devs.add_device(AxDeviceEnum::Block(ram_disk));
     }
 

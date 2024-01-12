@@ -356,6 +356,8 @@ impl TaskInner {
         let trap_frame_size = core::mem::size_of::<TrapFrame>();
         let frame_address = self.trap_frame.get();
         let kernel_base = self.get_kernel_stack_top().unwrap() - trap_frame_size;
+        info!("frame_address: {:p}", &frame_address);
+        info!("kernel_base  : {:x}", kernel_base);
         unsafe {
             __copy(frame_address, kernel_base);
         }
@@ -799,6 +801,15 @@ pub fn first_into_user(kernel_sp: usize, frame_base: usize) -> ! {
             invtlb    0x00, $r0, $r0
             move      $sp, {frame_base}
             move      $t1, {kernel_base}
+            
+            ld.d      $t0,  $sp, 2*8
+            st.d      $tp,  $t1, 2*8
+            move      $tp,  $t0
+
+            ld.d      $t0,  $sp, 21*8
+            st.d      $r21, $t1, 21*8
+            move      $r21, $t0
+
             csrwr     {kernel_sp}, 0x30   // save ksp into SAVE0 CSR
             ld.d      $t0, $sp, 32*8      // prmd
             csrwr     $t0, 0x1
@@ -806,14 +817,13 @@ pub fn first_into_user(kernel_sp: usize, frame_base: usize) -> ! {
             csrwr     $t0, 0x6
             
             ld.d      $r1, $sp, 1*8
-            ld.d      $r2, $sp, 2*8
+            
             ld.d      $r4, $sp, 4*8
             ld.d      $r5, $sp, 5*8
             ld.d      $r6, $sp, 6*8
             ld.d      $r7, $sp, 7*8
             ld.d      $r8, $sp, 8*8
             ld.d      $r9, $sp, 9*8
-            
             ld.d      $r10, $sp, 10*8
             ld.d      $r11, $sp, 11*8
             ld.d      $r12, $sp, 12*8
@@ -824,10 +834,7 @@ pub fn first_into_user(kernel_sp: usize, frame_base: usize) -> ! {
             ld.d      $r17, $sp, 17*8
             ld.d      $r18, $sp, 18*8
             ld.d      $r19, $sp, 19*8
-
             ld.d      $r20, $sp, 20*8
-            
-            //ld.d      $r21, $sp, 20*8
 
             ld.d      $r22, $sp, 22*8
             ld.d      $r23, $sp, 23*8
@@ -874,6 +881,7 @@ extern "C" fn task_entry() -> ! {
                     // 切换页表已经在switch实现了
                     // 记得更新时间
                     task.time_stat_from_kernel_to_user();
+                    info!("First tp: {:x}",(unsafe { *frame_address }).regs[2]);
                     first_into_user(kernel_sp, frame_address as usize);
                 }
             }

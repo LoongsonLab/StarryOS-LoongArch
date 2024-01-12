@@ -72,6 +72,8 @@ impl SignalDefault {
     }
 }
 
+
+#[cfg(target_arch = "riscv")]
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct SigAction {
@@ -91,6 +93,29 @@ pub struct SigAction {
     pub restorer: usize,
     /// 该信号处理函数的信号掩码
     pub sa_mask: usize,
+}
+
+
+#[cfg(target_arch = "loongarch64")]
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct SigAction {
+    /// 信号处理函数的地址
+    /// 1. 如果是上述特殊值 SIG_DFL 或 SIG_IGN，则按描述处理
+    /// 2. 若flags没有指定SA_SIGINFO，则函数原型为 fn(sig: SignalNo) -> ()，对应C语言原型为 void (*sa_handler)(int)
+    /// 3. 若flags指定了SA_SIGINFO，则函数原型为 fn(sig: SignalNo, info: &SigInfo, ucontext: &mut UContext) -> ()，
+    /// 对应C语言原型为 void (*sa_sigaction)(int, siginfo_t *, void *)。
+    ///
+    /// 其中，SigInfo和SignalNo的定义见siginfo.rs和signal_no.rs。
+    /// UContext即是处理信号时内核保存的用户态上下文，它存储在用户地址空间，会在调用sig_return时被恢复，定义见ucontext.rs。
+    pub sa_handler: usize,
+    /// 信号处理的flags
+    pub sa_flags: SigActionFlags,
+    /// 该信号处理函数的信号掩码
+    pub sa_mask: [usize; 2],
+    /// 信号处理的跳板页地址，存储了sig_return的函数处理地址
+    /// 仅在SA_RESTORER标志被设置时有效
+    pub restorer: usize,
 }
 
 impl SigAction {

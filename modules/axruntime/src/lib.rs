@@ -153,7 +153,7 @@ pub extern "C" fn rust_main(cpu_id: usize, dtb: usize) -> ! {
     #[cfg(all(feature = "paging", target_arch = "loongarch64"))]
     {
         extern "C" { fn img_start();}
-        error!("IMG: {:p}", img_start as *const());
+        trace!("IMG: {:p}", img_start as *const());
     }
 
     info!("Initialize platform devices...");
@@ -279,9 +279,18 @@ cfg_if::cfg_if! {
                     }
 
                     // 此时qemu运行，文件镜像的位置需要由汇编确定
+                    use axhal::mem::VirtAddr;
+                    #[cfg(not(target_arch = "loongarch64"))]
+                    let img_start_vaddr:VirtAddr = phys_to_virt(TESTCASE_MEMORY_START.into());
+                    #[cfg(not(target_arch = "loongarch64"))]
                     let img_start_addr:PhysAddr = axhal::mem::virt_to_phys((img_start as usize).into());
+
+                    #[cfg(target_arch = "loongarch64")]
+                    let img_start_vaddr:VirtAddr = (0xffffff8000000000 | TESTCASE_MEMORY_START).into();
+                    #[cfg(target_arch = "loongarch64")]
+                    let img_start_addr:PhysAddr = ((img_start as usize) & 0xffffffff).into();
                     kernel_page_table.map_region(
-                        phys_to_virt(TESTCASE_MEMORY_START.into()),
+                        img_start_vaddr,
                         img_start_addr,
                         TESTCASE_MEMORY_SIZE,
                         MemRegionFlags::from_bits(1 << 0 | 1 << 1 | 1 << 4).unwrap().into(),

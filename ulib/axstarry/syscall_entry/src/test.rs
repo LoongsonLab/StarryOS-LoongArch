@@ -1,15 +1,14 @@
 extern crate alloc;
 use alloc::boxed::Box;
-use alloc::format;
+// use alloc::format;
 use alloc::string::{String, ToString};
 use alloc::sync::Arc;
 use alloc::vec::Vec;
 
 #[cfg(not(target_arch = "loongarch64"))]
-use axhal::arch::{flush_tlb, write_page_table_root};
-#[cfg(target_arch = "loongarch64")]
-use axhal::arch::flush_tlb;
+use axhal::arch::write_page_table_root;
 
+use axhal::arch::flush_tlb;
 use axhal::KERNEL_PROCESS_ID;
 use axlog::info;
 use axlog::warn;
@@ -18,7 +17,6 @@ use axprocess::{wait_pid, yield_now_task, PID2PC};
 
 #[cfg(not(target_arch = "loongarch64"))]
 use axruntime::KERNEL_PAGE_TABLE;
-
 use axtask::{TaskId, EXITED_TASKS};
 use lazy_init::LazyInit;
 use spinlock::SpinNoIrq;
@@ -582,6 +580,7 @@ pub fn fs_init(_case: &'static str) {
     // }
 
     // gcc相关的链接，可以在testcases/gcc/riscv64-linux-musl-native/lib目录下使用ls -al指令查看
+    /*
     let src_dir = "riscv64-linux-musl-native/lib";
     create_link(
         &FilePath::new(format!("{}/ld-musl-riscv64.so.1", src_dir).as_str()).unwrap(),
@@ -627,6 +626,7 @@ pub fn fs_init(_case: &'static str) {
         &FilePath::new(format!("{}/libstdc++.so.6", src_dir).as_str()).unwrap(),
         &FilePath::new(format!("{}/libstdc++.so.6.0.29", src_dir).as_str()).unwrap(),
     );
+    */
 }
 
 pub fn run_testcases(case: &'static str) {
@@ -683,12 +683,12 @@ pub fn run_testcases(case: &'static str) {
             };
         }
         TaskId::clear();
+        
         #[cfg(not(target_arch = "loongarch64"))]
-        unsafe {
+        {
             write_page_table_root(KERNEL_PAGE_TABLE.root_paddr());
-            flush_tlb(None);
         };
-        #[cfg(target_arch = "loongarch64")]
+        
         flush_tlb(None);
 
         EXITED_TASKS.lock().clear();

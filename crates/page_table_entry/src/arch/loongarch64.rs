@@ -105,7 +105,8 @@ impl GenericPTE for LA64PTE {
         Self(flags.bits() as u64 | ((paddr.as_usize()) as u64 & Self::PHYS_ADDR_MASK))
     }
     fn new_fault_page(_is_huge: bool) -> Self {
-        let flags = PTEFlags::V;
+        // user, cache
+        let flags = PTEFlags::V ;
         Self(flags.bits() as u64)
     }
     fn new_table(paddr: PhysAddr) -> Self {

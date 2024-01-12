@@ -17,11 +17,11 @@ kernel-base-vaddr = "0x9000_0000_A200_0000"
 # addresses.
 phys-virt-offset = "0x9000_0000_0000_0000"
 
-# Testcase memory
+# Testcase memory(LA don't use this)
 # testcase-memory-start = "0xA228_0000"
-# testcase-memory-start = "0xA20C_0000"
+testcase-memory-start = "0xA20C_0000"
 # testcase-memory-start = "0xA20B_0000"
-testcase-memory-start = "0xA20D_0000"
+# testcase-memory-start = "0xA20D_0000"
 # testcase-memory-start = "0xA20E_0000"
 
 testcase-memory-size = "0x400_0000"    # 如果是要手动加载进来，认为镜像大小是64MB

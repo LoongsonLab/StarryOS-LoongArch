@@ -1,6 +1,6 @@
 .macro SAVE_REGS
     st.d $ra, $sp, 8
-    st.d $tp, $sp, 16
+    # st.d $tp, $sp, 16
 
     csrrd $t0, 0x32
     st.d $t0, $sp, 96
@@ -21,7 +21,7 @@
     st.d $t6, $sp, 144
     st.d $t7, $sp, 152
     st.d $t8, $sp, 160
-    st.d $r21, $sp,168
+    # st.d $r21, $sp,168
     st.d $fp, $sp, 176
     st.d $s0, $sp, 184
     st.d $s1, $sp, 192
@@ -35,8 +35,26 @@
 .endm
 
 .macro RESTORE_REGS
+    csrrd       $t0, 0x1
+    andi        $t0, $t0, 0x3
+    bnez        $t0, .Ltmp_user
+
+    ld.d $tp,  $sp, 2*8
+    ld.d $r21, $sp, 21*8
+    b .Ltmp_common
+
+.Ltmp_user:
+    ld.d $t0, $sp, 2*8
+    st.d $tp, $sp, 2*8
+    move $tp, $t0
+
+    ld.d $t0,  $sp, 21*8
+    st.d $r21, $sp, 21*8
+    move $r21, $t0
+
+.Ltmp_common:
     ld.d $ra, $sp, 8
-    ld.d $tp, $sp, 16
+    # ld.d $tp, $sp, 16
     ld.d $a0, $sp, 32
     ld.d $a1, $sp, 40
     ld.d $a2, $sp, 48
@@ -54,7 +72,7 @@
     ld.d $t6, $sp, 144
     ld.d $t7, $sp, 152
     ld.d $t8, $sp, 160
-    ld.d $r21, $sp,168
+    # ld.d $r21, $sp,168
     ld.d $fp, $sp, 176
     ld.d $s0, $sp, 184
     ld.d $s1, $sp, 192
@@ -88,9 +106,19 @@ trap_vector_base:
     csrwr       $sp, 0x33                   // save user sp into SAVE1 CSR
     csrrd       $sp, 0x30                   // restore kernel sp
     addi.d      $sp, $sp, -{trapframe_size} // allocate space
+
+    // 
+    ld.d        $t0,  $sp, 2*8
+    st.d        $tp,  $sp, 2*8
+    move        $tp,  $t0
+
+    ld.d        $t0,  $sp, 21*8
+    st.d        $r21, $sp, 21*8
+    move        $r21, $t0
+
     // save user sp
     csrrd       $t0, 0x33
-    st.d        $t0, $sp, 24
+    st.d        $t0, $sp, 3*8 // sp
      
 .Lcommon:
     // save the registers.

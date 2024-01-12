@@ -70,7 +70,6 @@ pub fn write_page_table_root(root_paddr: PhysAddr) {
             "csrwr {root_paddr}, 0x1a", // PGDH
             // when set pgd, MUST flush tlb. becase of old PTE in tlb.
             "invtlb 0x00, $r0, $r0   ", // flush tlb
-            // "dbar  0       ",           // sync
             root_paddr = in(reg) root_paddr.as_usize(),
         )
     }

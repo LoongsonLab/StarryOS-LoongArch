@@ -549,7 +549,7 @@ impl MemorySet {
 
             match start {
                 Some(start) => {
-                    info!("found area [{:?}, {:?})", start, start + size);
+                    info!("found area [{:?}, {:?}), flags:{:?}", start, start + size, flags);
                     self.new_region(start, size, flags, None, backend);
 
                     start.as_usize() as isize

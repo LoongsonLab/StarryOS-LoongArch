@@ -15,6 +15,8 @@ pub struct TrapFrame {
     pub badv: usize,
     /// Current Mode Information
     pub crmd: usize,
+    /// fp register
+    pub fs: [usize; 2],
 }
 
 impl TrapFrame {

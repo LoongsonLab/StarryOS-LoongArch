@@ -156,6 +156,8 @@ pub fn syscall_clone(
     #[cfg(feature = "signal")]
     let sig_child = SignalNo::from(flags as usize & 0x3f) == SignalNo::SIGCHLD;
 
+    info!("syscall_clone");
+
     if let Ok(new_task_id) = curr_process.clone_task(
         clone_flags,
         stack,
