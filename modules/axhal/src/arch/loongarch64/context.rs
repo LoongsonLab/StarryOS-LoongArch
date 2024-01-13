@@ -29,16 +29,10 @@ impl TrapFrame {
     }
     /// 用于第一次进入应用程序时的初始化
     pub fn app_init_context(app_entry: usize, user_sp: usize) -> Self {
-        // let sstatus = sstatus::read();
-        // 当前版本的riscv不支持使用set_spp函数，需要手动修改
-        // 修改当前的sstatus为User，即是第8位置0
         let mut trap_frame = TrapFrame::default();
         trap_frame.set_user_sp(user_sp);
         trap_frame.era = app_entry;
         trap_frame.prmd = 3 | 1<<2; // user and enable int
-        // info!("app_init_context: TF :0x{:p}", &trap_frame);
-        // info!("app_init_context: SP :0x{:x}", trap_frame.regs[3]);
-        // info!("app_init_context: Era:0x{:x}", trap_frame.era);
         unsafe {
             // a0为参数个数
             // a1存储的是用户栈底，即argv
