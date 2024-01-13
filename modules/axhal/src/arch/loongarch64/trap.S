@@ -136,7 +136,7 @@ trap_vector_base:
     ld.d  $t2, $sp, 8*32  // prmd
     csrwr $t2, 0x1
 
-    // save kernel sp when exit kernel mode
+    // Save kernel sp when exit kernel mode
     addi.d $t1, $sp, {trapframe_size}
     csrwr  $t1, 0x30 
 

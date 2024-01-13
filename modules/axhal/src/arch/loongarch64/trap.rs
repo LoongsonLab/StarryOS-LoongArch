@@ -36,7 +36,7 @@ fn dbg_break_point() {
 #[no_mangle]
 fn loongarch64_trap_handler(tf: &mut TrapFrame, from_user: bool) {
     let estat = estat::read();
-    let code = estat.ecode();
+    let _code = estat.ecode();
     if (estat.ecode() != 0) && (estat.ecode() != 0xb) {
         info!("Trap era : 0x{:x}", tf.era);
         info!("Trap badv: 0x{:x}", tf.badv);
@@ -60,8 +60,12 @@ fn loongarch64_trap_handler(tf: &mut TrapFrame, from_user: bool) {
             // get system call return value
             let syscall_num = tf.regs[11];
             info!("Syscall num: {}", syscall_num);
-            info!("Syscall tp : 0x{:x}", tf.regs[2]);
-            info!("Syscall a5 : 0x{:x}", tf.regs[5]);
+            // info!("Syscall tp : 0x{:x}", tf.regs[2]);
+            // info!("Syscall a5 : 0x{:x}", tf.regs[5]);
+            if syscall_num == 139 {
+                info!("----Syscall excpt: 0x{:x}----", tf.era);
+                info!("TrapFrame Addr: {:p}", &tf);
+            }
 
             let result = handle_syscall(
                 tf.regs[11],
@@ -71,9 +75,12 @@ fn loongarch64_trap_handler(tf: &mut TrapFrame, from_user: bool) {
             );
 
             info!("Syscall Exit");
-            info!("tf.regs[11]:{}", syscall_num);
-            if syscall_num == 221 {
+            if syscall_num == 139 {
                 dbg_break_point();
+            }
+
+            if syscall_num == 139 {
+                info!("----Syscall return: 0x{:x}----", tf.era);
             }
 
             // cx is changed during sys_exec, so we have to call it again

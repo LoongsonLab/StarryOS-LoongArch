@@ -5,7 +5,7 @@ use axfs::api::port::{
 };
 use axhal::console::{getchar, write_bytes};
 use axio::{Read, Seek, SeekFrom, Write};
-use axlog::warn;
+use axlog::trace;
 use axsync::Mutex;
 use axtask::yield_now;
 /// stdin file for getting chars from console
@@ -120,13 +120,13 @@ impl FileIO for Stdin {
                 Ok(())
             }
             TCGETS | TIOCSPGRP => {
-                warn!("stdin TCGETS | TIOCSPGRP, pretend to be tty.");
+                trace!("stdin TCGETS | TIOCSPGRP, pretend to be tty.");
                 // pretend to be tty
                 Ok(())
             }
 
             TIOCGPGRP => {
-                warn!("stdin TIOCGPGRP, pretend to be have a tty process group.");
+                trace!("stdin TIOCGPGRP, pretend to be have a tty process group.");
                 unsafe {
                     *(data as *mut u32) = 0;
                 }

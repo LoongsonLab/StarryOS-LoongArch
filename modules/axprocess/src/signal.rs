@@ -3,7 +3,7 @@ extern crate alloc;
 use alloc::sync::Arc;
 use axerrno::{AxError, AxResult};
 use axhal::{arch::TrapFrame, cpu::this_cpu_id, KERNEL_PROCESS_ID};
-use axlog::{info, warn};
+use axlog::{info, warn, trace};
 use axsignal::{
     action::{SigActionFlags, SignalDefault, SIG_IGN},
     info::SigInfo,
@@ -129,7 +129,7 @@ pub fn handle_signals() {
     } else {
         return;
     };
-    warn!(
+    trace!(
         "cpu: {}, task: {}, handler signal: {}",
         this_cpu_id(),
         current_task.id().as_u64(),

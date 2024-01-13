@@ -15,7 +15,11 @@ pub struct TrapFrame {
     pub badv: usize,
     /// Current Mode Information
     pub crmd: usize,
-    /// fp register
+    /// Kernel tp register
+    pub ktp:  usize,
+    /// Kernel r21 register
+    pub kr21: usize,
+    /// Fp register
     pub fs: [usize; 2],
 }
 
