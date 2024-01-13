@@ -802,13 +802,8 @@ pub fn first_into_user(kernel_sp: usize, frame_base: usize) -> ! {
             move      $sp, {frame_base}
             move      $t1, {kernel_base}
             
-            ld.d      $t0,  $sp, 2*8
-            st.d      $tp,  $t1, 2*8
-            move      $tp,  $t0
-
-            ld.d      $t0,  $sp, 21*8
-            st.d      $r21, $t1, 21*8
-            move      $r21, $t0
+            st.d      $tp,  $t1, 36*8
+            st.d      $r21, $t1, 37*8
 
             csrwr     {kernel_sp}, 0x30   // save ksp into SAVE0 CSR
             ld.d      $t0, $sp, 32*8      // prmd
@@ -817,7 +812,7 @@ pub fn first_into_user(kernel_sp: usize, frame_base: usize) -> ! {
             csrwr     $t0, 0x6
             
             ld.d      $r1, $sp, 1*8
-            
+            ld.d      $tp, $sp, 2*8
             ld.d      $r4, $sp, 4*8
             ld.d      $r5, $sp, 5*8
             ld.d      $r6, $sp, 6*8
@@ -835,7 +830,7 @@ pub fn first_into_user(kernel_sp: usize, frame_base: usize) -> ! {
             ld.d      $r18, $sp, 18*8
             ld.d      $r19, $sp, 19*8
             ld.d      $r20, $sp, 20*8
-
+            ld.d      $r21, $sp, 21*8
             ld.d      $r22, $sp, 22*8
             ld.d      $r23, $sp, 23*8
             ld.d      $r24, $sp, 24*8
@@ -848,7 +843,6 @@ pub fn first_into_user(kernel_sp: usize, frame_base: usize) -> ! {
             ld.d      $r31, $sp, 31*8
 
             ld.d      $sp, $sp, 3*8       // user sp
-
             ertn
             ",
             frame_base = in(reg) frame_base,

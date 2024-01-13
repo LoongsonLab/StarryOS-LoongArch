@@ -11,7 +11,7 @@ __copy:
     #     kernel_base: *mut T
     # )
     .set n, 0
-    .rept 38
+    .rept 40
         COPY %n
         .set n, n + 1
     .endr
