@@ -797,6 +797,9 @@ pub fn first_into_user(kernel_sp: usize, frame_base: usize) -> ! {
     unsafe {
         core::arch::asm!(
             r"
+            .equ KSAVE_KSP,    0x30
+            .equ LA_CSR_EUEN,  0x2
+            
             dbar 0
             invtlb    0x00, $r0, $r0
             move      $sp, {frame_base}
@@ -805,11 +808,15 @@ pub fn first_into_user(kernel_sp: usize, frame_base: usize) -> ! {
             st.d      $tp,  $t1, 36*8
             st.d      $r21, $t1, 37*8
 
-            csrwr     {kernel_sp}, 0x30   // save ksp into SAVE0 CSR
-            ld.d      $t0, $sp, 32*8      // prmd
+            csrwr     {kernel_sp}, KSAVE_KSP   // save ksp into SAVE0 CSR
+            ld.d      $t0, $sp, 32*8           // prmd
             csrwr     $t0, 0x1
-            ld.d      $t0, $sp, 33*8      // era
+            ld.d      $t0, $sp, 33*8           // era
             csrwr     $t0, 0x6
+
+            csrrd     $t0, LA_CSR_EUEN
+            ori       $t0, $t0, 1
+            csrwr     $t0, LA_CSR_EUEN
             
             ld.d      $r1, $sp, 1*8
             ld.d      $tp, $sp, 2*8
