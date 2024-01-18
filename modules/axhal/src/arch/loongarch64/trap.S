@@ -23,7 +23,8 @@
     st.d    $t6, $sp, 18*8
     st.d    $t7, $sp, 19*8
     st.d    $t8, $sp, 20*8
-    st.d    $fp, $sp, 21*8
+
+    st.d    $fp, $sp, 22*8
     st.d    $s0, $sp, 23*8
     st.d    $s1, $sp, 24*8
     st.d    $s2, $sp, 25*8
@@ -69,7 +70,8 @@
     ld.d    $t6, $sp, 18*8
     ld.d    $t7, $sp, 19*8
     ld.d    $t8, $sp, 20*8
-    ld.d    $fp, $sp, 21*8
+
+    ld.d    $fp, $sp, 22*8
     ld.d    $s0, $sp, 23*8
     ld.d    $s1, $sp, 24*8
     ld.d    $s2, $sp, 25*8
