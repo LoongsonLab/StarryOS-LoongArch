@@ -882,7 +882,7 @@ extern "C" fn task_entry() -> ! {
                     // 切换页表已经在switch实现了
                     // 记得更新时间
                     task.time_stat_from_kernel_to_user();
-                    info!("First tp: {:x}",(unsafe { *frame_address }).regs[2]);
+                    info!("First tp: 0x{:x}",(unsafe { *frame_address }).regs[2]);
                     first_into_user(kernel_sp, frame_address as usize);
                 }
             }

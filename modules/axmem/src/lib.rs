@@ -546,7 +546,7 @@ impl MemorySet {
         } else {
             info!("find free area");
             let start = self.find_free_area(start, size);
-
+            debug!("mmap find_free_area: 0x{:x}", start.as_ref().unwrap().as_usize());
             match start {
                 Some(start) => {
                     info!("found area [{:?}, {:?}), flags:{:?}", start, start + size, flags);
@@ -792,7 +792,9 @@ impl MemorySet {
             let entry = entry.unwrap().0;
             if !entry.is_present() {
                 // 若未分配物理页面，则手动为其分配一个页面，写入到对应页表中
-                area.handle_page_fault(addr, entry.flags(), &mut self.page_table);
+                // the following code error when mmap syscall in loongarch platform
+                // area.handle_page_fault(addr, entry.flags(), &mut self.page_table);
+                area.handle_page_fault(addr, area.flags, &mut self.page_table);
             }
             Ok(())
         } else {

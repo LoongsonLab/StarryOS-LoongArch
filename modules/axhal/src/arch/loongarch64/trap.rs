@@ -37,13 +37,19 @@ fn dbg_break_point() {
 fn loongarch64_trap_handler(tf: &mut TrapFrame, from_user: bool) {
     let estat = estat::read();
     let _code = estat.ecode();
-    if (estat.ecode() != 0) && (estat.ecode() == 0xb) {
+    // if (estat.ecode() != 0) && (estat.ecode() == 0xb) {
+    if (estat.ecode() != 0) {
         info!("Trap era : 0x{:x}", tf.era);
         info!("Trap badv: 0x{:x}", tf.badv);
         info!("Trap sp  : 0x{:x}", tf.regs[3]);
         info!("Trap ra  : 0x{:x}", tf.regs[1]);
+        info!("Trap tp  : 0x{:x}", tf.regs[2]);
         info!("Trap code: {:?}", estat.cause());
     }
+
+    // if from_user {
+    //     warn!("Trap tp  : 0x{:x}", tf.regs[2]);
+    // }
     
     match estat.cause() {
         Trap::Exception(Exception::Breakpoint) => handle_breakpoint(&mut tf.era),

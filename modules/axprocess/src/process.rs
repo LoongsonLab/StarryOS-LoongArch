@@ -553,7 +553,7 @@ impl Process {
         // 若没有给定用户栈，则使用当前用户栈
         // 没有给定用户栈的时候，只能是共享了地址空间，且原先调用clone的有用户栈，此时已经在之前的trap clone时复制了
         if let Some(stack) = stack {
-            trap_frame.regs[3] = stack; // r3 = tp
+            trap_frame.regs[3] = stack; // r3 = sp
             // info!(
             //     "New user stack: sepc:{:X}, stack:{:X}",
             //     trap_frame.sepc, trap_frame.regs.sp
