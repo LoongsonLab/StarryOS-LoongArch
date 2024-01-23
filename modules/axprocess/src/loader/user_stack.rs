@@ -5,6 +5,7 @@ use core::{
 };
 
 use alloc::{collections::BTreeMap, string::String, vec::Vec};
+use axlog::info;
 
 pub const USER_INIT_STACK_SIZE: usize = 0x4000;
 /// 规定用户栈初始化时的内容
@@ -103,8 +104,10 @@ pub fn init_stack(
     // 加入envs和argv的地址
     stack.push(&[null::<u8>()]);
     stack.push(envs.as_slice());
+    info!("env: 0x{:x}", stack.get_sp());
     stack.push(&[null::<u8>()]);
     stack.push(argv.as_slice());
+    info!("env: 0x{:x}", stack.get_sp());
     // 加入argc
     stack.push(&[args.len()]);
     stack

@@ -111,11 +111,11 @@ pub struct SigAction {
     pub sa_handler: usize,
     /// 信号处理的flags
     pub sa_flags: SigActionFlags,
-    /// 该信号处理函数的信号掩码
-    pub sa_mask: [usize; 2],
     /// 信号处理的跳板页地址，存储了sig_return的函数处理地址
     /// 仅在SA_RESTORER标志被设置时有效
     pub restorer: usize,
+    /// 该信号处理函数的信号掩码
+    pub sa_mask: [usize; 2],
 }
 
 impl SigAction {

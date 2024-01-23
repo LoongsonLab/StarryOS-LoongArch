@@ -33,12 +33,12 @@ impl TrapFrame {
         trap_frame.set_user_sp(user_sp);
         trap_frame.era = app_entry;
         trap_frame.prmd = 3 | 1<<2; // user and enable int
-        unsafe {
-            // a0为参数个数
-            // a1存储的是用户栈底，即argv
-            trap_frame.regs[4] = *(user_sp as *const usize);
-            trap_frame.regs[5] = *(user_sp as *const usize).add(1) as usize;
-        }
+        // unsafe {
+        //     // a0为参数个数
+        //     // a1存储的是用户栈底，即argv
+        //     trap_frame.regs[4] = *(user_sp as *const usize);
+        //     trap_frame.regs[5] = *(user_sp as *const usize).add(1) as usize;
+        // }
         trap_frame
     }
 }

@@ -97,6 +97,7 @@ pub fn task_syscall(syscall_id: task_syscall_id::TaskSyscallId, args: [usize; 6]
             args[2] as *mut ITimerVal,
         ),
         GETTIMER => syscall_gettimer(args[0] as usize, args[1] as *mut ITimerVal),
+        SETPGID => syscall_setpgid(args[0], args[1]),
         SETSID => syscall_setsid(),
         GETRUSAGE => syscall_getrusage(args[0] as i32, args[1] as *mut TimeVal),
         UMASK => syscall_umask(args[0] as i32),

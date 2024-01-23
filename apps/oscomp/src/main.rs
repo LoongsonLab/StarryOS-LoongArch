@@ -8,4 +8,5 @@ use syscall_entry::run_testcases;
 fn main() {
     run_testcases("sdcard");
     // run_testcases("libc-dynamic");
+    // run_testcases("libc-static");
 }

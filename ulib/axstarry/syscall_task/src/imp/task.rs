@@ -351,6 +351,10 @@ pub fn syscall_gettid() -> SyscallResult {
     Ok(current_task().id().as_u64() as isize)
 }
 
+pub fn syscall_setpgid(_pid:usize, _pgid:usize) -> SyscallResult {
+    Ok(0)
+}
+
 pub fn syscall_setsid() -> SyscallResult {
     let process = current_process();
     let task = current_task();

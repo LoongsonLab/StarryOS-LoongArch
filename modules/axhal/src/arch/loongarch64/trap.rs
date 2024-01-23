@@ -38,7 +38,7 @@ fn loongarch64_trap_handler(tf: &mut TrapFrame, from_user: bool) {
     let estat = estat::read();
     let _code = estat.ecode();
     // if (estat.ecode() != 0) && (estat.ecode() == 0xb) {
-    if (estat.ecode() != 0) {
+    if estat.ecode() != 0 {
         info!("Trap era : 0x{:x}", tf.era);
         info!("Trap badv: 0x{:x}", tf.badv);
         info!("Trap sp  : 0x{:x}", tf.regs[3]);
