@@ -130,12 +130,13 @@ pub fn syscall_exec(
     let curr_process = current_process();
     // 清空futex信号列表
     clear_wait(curr_process.pid(), true);
-    let argc = args_vec.len();
+    let _argc = args_vec.len();
     if curr_process.exec(path, args_vec, envs_vec).is_err() {
         exit_current_task(0);
     }
     info!("SysCall exec");
-    Ok(argc as isize)
+    // Ok(argc as isize)
+    Ok(0)
 }
 
 pub fn syscall_clone(
