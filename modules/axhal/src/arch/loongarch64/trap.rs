@@ -73,8 +73,10 @@ fn loongarch64_trap_handler(tf: &mut TrapFrame, from_user: bool) {
                 info!("TrapFrame Addr: {:p}", &tf);
             }
 
-            if syscall_num == 260 {
-                info!("Wait options: 0x{:x}", tf.regs[6]);
+            if syscall_num == 221 {
+                info!("execv syscal tf: 0x{:p}", tf);
+                info!("execv syscal a0: 0x{:x}", tf.regs[4]);
+                info!("execv syscal a1: 0x{:x}", tf.regs[5]);
             }
 
             let result = handle_syscall(

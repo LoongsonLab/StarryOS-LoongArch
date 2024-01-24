@@ -320,7 +320,7 @@ pub const OSTRAIN_TESTCASES: &[&str] = &[
 #[allow(dead_code)]
 pub const SDCARD_TESTCASES: &[&str] = &[
     // "hello",
-    // "main",
+    "main",
     // "libc.so",
     // "busybox echo hello",
     // "busybox sh test_hello.sh",

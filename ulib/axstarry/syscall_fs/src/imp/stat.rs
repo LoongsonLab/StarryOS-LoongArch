@@ -24,8 +24,9 @@ pub fn syscall_fstat(fd: usize, kst: *mut Kstat) -> SyscallResult {
         return Err(SyscallError::EPERM);
     }
     let file = fd_table[fd].clone().unwrap();
-    if file.get_type() != FileIOType::FileDesc {
-        debug!("fd {} is not a file", fd);
+    if (file.get_type() != FileIOType::FileDesc) &&
+       (file.get_type() != FileIOType::DirDesc) {
+        debug!("fd {} is not a file or dir", fd);
         return Err(SyscallError::EPERM);
     }
 
