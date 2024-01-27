@@ -124,7 +124,7 @@ else ifeq ($(ARCH), loongarch64)
   LOG := debug
   LOG := info
 #   LOG := trace
-#   LOG := warn
+  LOG := warn
   ACCEL ?= n
   SMP := 1
   TARGET := loongarch64-unknown-none

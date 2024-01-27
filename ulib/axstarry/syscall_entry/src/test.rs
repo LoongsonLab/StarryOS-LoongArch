@@ -320,7 +320,7 @@ pub const OSTRAIN_TESTCASES: &[&str] = &[
 #[allow(dead_code)]
 pub const SDCARD_TESTCASES: &[&str] = &[
     // "hello",
-    "main",
+    // "main",
     // "./ld.so",
     // "./lua sin30.lua"
     // "libc.so",
@@ -328,7 +328,7 @@ pub const SDCARD_TESTCASES: &[&str] = &[
     // "busybox sh test_hello.sh",
     // "busybox sh busybox_testcode.sh",
     // "busybox ls",
-    // "busybox sh",
+    "busybox sh",
     // "./lmbench_all",
     // "./lmbench_all lat_syscall -P 1 null",
     // "./libc-bench",

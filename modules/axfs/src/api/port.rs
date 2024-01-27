@@ -46,6 +46,43 @@ pub struct Kstat {
     pub st_ctime_nsec: isize,
 }
 
+
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct statx_timestamp {
+    pub tv_sec: u64,
+    pub tv_nsec: u32,
+    pub pad: u32,
+}
+
+/// 文件系统信息
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct Kstatx {
+    pub stx_mask: u32,
+    pub stx_blksize: u32,
+    pub stx_attributes: u64,
+    pub stx_nlink: u32,
+    pub stx_uid: u32,
+    pub stx_gid: u32,
+    pub stx_mode: u16,
+    pad1: u16,
+    pub stx_ino: u64,
+    pub stx_size: u64,
+    pub stx_blocks: u64,
+    pub stx_attributes_mask: u64,
+    pub stx_atime: statx_timestamp,
+    pub stx_btime: statx_timestamp,
+    pub stx_ctime: statx_timestamp,
+    pub stx_mtime: statx_timestamp,
+    pub stx_rdev_major: u32,
+    pub stx_rdev_minor: u32,
+    pub stx_dev_major: u32,
+    pub stx_dev_minor: u32,
+    spare: [u64; 14],
+}
+
+
 impl Default for Kstat {
     fn default() -> Self {
         Self {
