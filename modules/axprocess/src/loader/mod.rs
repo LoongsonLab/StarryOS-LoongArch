@@ -2,7 +2,6 @@
 extern crate alloc;
 use alloc::{
     string::{String, ToString},
-    vec,
     vec::Vec,
 };
 // 堆和栈的基地址
@@ -13,10 +12,12 @@ pub const USER_STACK_SIZE: usize = 0x20_0000;
 use axerrno::AxResult;
 mod user_stack;
 use axhal::{mem::VirtAddr, paging::MappingFlags};
-use axlog::info;
+use axlog::{info, trace};
 use axmem::MemorySet;
 use core::str::from_utf8;
 use xmas_elf::{program::SegmentData, ElfFile};
+#[cfg(target_arch = "riscv64")]
+use axfs::api::AsAny;
 
 use crate::{
     link::{real_path, FilePath},
@@ -48,40 +49,10 @@ impl<'a> Loader<'a> {
         self,
         args: Vec<String>,
         envs: Vec<String>,
-        mut memory_set: &mut MemorySet,
+        memory_set: &mut MemorySet,
     ) -> AxResult<(VirtAddr, VirtAddr, VirtAddr)> {
         info!("args: {:?}", args);
-        if let Some(interp) = self
-            .elf
-            .program_iter()
-            .find(|ph| ph.get_type() == Ok(xmas_elf::program::Type::Interp))
-        {
-            let interp = match interp.get_data(&self.elf) {
-                Ok(SegmentData::Undefined(data)) => data,
-                _ => panic!("Invalid data in Interp Elf Program Header"),
-            };
-
-            let interp_path = from_utf8(interp).expect("Interpreter path isn't valid UTF-8");
-            // remove trailing '\0'
-            let interp_path = interp_path.trim_matches(char::from(0));
-            info!("Interpreter path: {}", interp_path);
-
-            let mut new_argv = vec![interp_path.to_string()];
-            new_argv.extend(args);
-            info!("Interpreter args: {:?}", new_argv);
-
-            #[cfg(not(feature = "fs"))]
-            {
-                panic!("ELF Interpreter is not supported without fs feature");
-            }
-            let interp_path = FilePath::new(interp_path)?;
-            let real_interp_path = real_path(&(interp_path.path().to_string()));
-            let interp = axfs::api::read(real_interp_path.as_str())
-                .expect("Error reading Interpreter from fs");
-            let loader = Loader::new(&interp);
-            return loader.load(new_argv, envs, &mut memory_set);
-        }
-
+        // first load elf program
         let auxv = memory_set.map_elf(&self.elf);
         // Allocate memory for user stack and hold it in memory_set
         // 栈顶为低地址，栈底为高地址
@@ -120,8 +91,42 @@ impl<'a> Loader<'a> {
             Some(&data),
             None,
         );
+
+        let mut app_entry = memory_set.entry.into();
+
+        if let Some(interp) = self
+            .elf
+            .program_iter()
+            .find(|ph| ph.get_type() == Ok(xmas_elf::program::Type::Interp))
+        {
+            let interp = match interp.get_data(&self.elf) {
+                Ok(SegmentData::Undefined(data)) => data,
+                _ => panic!("Invalid data in Interp Elf Program Header"),
+            };
+
+            let interp_path = from_utf8(interp).expect("Interpreter path isn't valid UTF-8");
+            // remove trailing '\0'
+            let interp_path = interp_path.trim_matches(char::from(0));
+            info!("Interpreter path: {}", interp_path);
+
+            #[cfg(not(feature = "fs"))]
+            {
+                panic!("ELF Interpreter is not supported without fs feature");
+            }
+            let interp_path = FilePath::new(interp_path)?;
+            let real_interp_path = real_path(&(interp_path.path().to_string()));
+            let interp = axfs::api::read(real_interp_path.as_str())
+                .expect("Error reading Interpreter from fs");
+            let loader = Loader::new(&interp);
+            let interp_auxv = memory_set.map_elf(&loader.elf);
+
+            const AT_ENTRY: u8 = 9;
+            app_entry = (*interp_auxv.get(&AT_ENTRY).unwrap()).into();
+            trace!("interp entry: {:?}", app_entry);
+        }
+
         Ok((
-            memory_set.entry.into(),
+            app_entry,
             ustack_bottom.into(),
             heap_start.into(),
         ))

@@ -8,11 +8,15 @@ pub use backend::MemBackend;
 
 extern crate alloc;
 use alloc::{collections::BTreeMap, sync::Arc, vec::Vec};
+#[cfg(target_arch = "riscv64")]
 use core::{
     mem::size_of,
     ptr::copy_nonoverlapping,
-    sync::atomic::{AtomicI32, Ordering},
 };
+#[cfg(target_arch = "riscv64")]
+use xmas_elf::symbol_table::Entry;
+
+use core::sync::atomic::{AtomicI32, Ordering};
 use page_table_entry::GenericPTE;
 use shared::SharedMem;
 use spinlock::SpinNoIrq;
@@ -23,20 +27,34 @@ use axhal::{
     mem::{memory_regions, phys_to_virt, PhysAddr, VirtAddr, PAGE_SIZE_4K},
     paging::{MappingFlags, PageSize, PageTable},
 };
-use xmas_elf::symbol_table::Entry;
 
+#[allow(unused)] 
 pub(crate) const REL_GOT: u32 = 6;
+#[allow(unused)]
 pub(crate) const REL_PLT: u32 = 7;
+#[allow(unused)]
 pub(crate) const REL_RELATIVE: u32 = 8;
+
+#[allow(unused)]
 pub(crate) const R_RISCV_64: u32 = 2;
+#[allow(unused)]
 pub(crate) const R_RISCV_RELATIVE: u32 = 3;
 
+#[allow(unused)]
 pub(crate) const R_LARCH_NONE:u32 = 0;
+#[allow(unused)]
+pub(crate) const R_LARCH_RELATIVE:u32 = 3;
+#[allow(unused)]
+pub(crate) const R_LARCH_JUMP_SLOT:u32 = 5;
+#[allow(unused)]
+pub(crate) const R_LARCH_IRELATIVE:u32 = 12;
+
 
 pub(crate) const AT_PHDR: u8 = 3;
 pub(crate) const AT_PHENT: u8 = 4;
 pub(crate) const AT_PHNUM: u8 = 5;
 pub(crate) const AT_PAGESZ: u8 = 6;
+
 #[allow(unused)]
 pub(crate) const AT_BASE: u8 = 7;
 #[allow(unused)]
@@ -191,6 +209,7 @@ impl MemorySet {
         info!("[loader] base addr: 0x{:x}", base_addr);
 
         // Relocate .rela.dyn sections
+        #[cfg(target_arch = "riscv64")]
         if let Some(rela_dyn) = elf.find_section_by_name(".rela.dyn") {
             let data = match rela_dyn.get_data(&elf) {
                 Ok(xmas_elf::sections::SectionData::Rela64(data)) => data,
@@ -216,18 +235,15 @@ impl MemorySet {
                             } else {
                                 base_addr + dyn_sym.value() as usize
                             };
-
                             let value = sym_val + entry.get_addend() as usize;
                             let addr = base_addr + entry.get_offset() as usize;
                             let kaddr = self.get_map_virt(VirtAddr::from(addr)).unwrap().as_usize();
-
                             trace!(
                                 "write: {:#x} @ {:#x} type = {}",
                                 value,
                                 addr,
                                 entry.get_type() as usize
                             );
-
                             unsafe {
                                 copy_nonoverlapping(
                                     value.to_ne_bytes().as_ptr(),
@@ -239,18 +255,32 @@ impl MemorySet {
                         REL_RELATIVE | R_RISCV_RELATIVE => {
                             let value = base_addr + entry.get_addend() as usize;
                             let addr = base_addr + entry.get_offset() as usize;
-
                             let kaddr = self.get_map_virt(VirtAddr::from(addr)).unwrap().as_usize();
-
                             trace!(
                                 "write: {:#x} @ {:#x} type = {}",
                                 value,
                                 addr,
                                 entry.get_type() as usize
                             );
-
                             // unsafe {info!("Ctx:{:x}", *(self.get_map_virt(VirtAddr::from(0x4039ad0)).unwrap().as_usize()  as *const u64));}
-
+                            unsafe {
+                                copy_nonoverlapping(
+                                    value.to_ne_bytes().as_ptr(),
+                                    kaddr as *mut u8,
+                                    size_of::<usize>() / size_of::<u8>(),
+                                );
+                            }
+                        }
+                        REL_RELATIVE => {
+                            let value = base_addr + entry.get_addend() as usize;
+                            let addr = base_addr + entry.get_offset() as usize;
+                            let kaddr = self.get_map_virt(VirtAddr::from(addr)).unwrap().as_usize();
+                            trace!(
+                                "write: {:#x} @ {:#x} type = {}",
+                                value,
+                                addr,
+                                entry.get_type() as usize
+                            );
                             unsafe {
                                 copy_nonoverlapping(
                                     value.to_ne_bytes().as_ptr(),
@@ -269,6 +299,7 @@ impl MemorySet {
         }
 
         // Relocate .rela.plt sections
+        #[cfg(target_arch = "riscv64")]
         if let Some(rela_plt) = elf.find_section_by_name(".rela.plt") {
             let data = match rela_plt.get_data(&elf) {
                 Ok(xmas_elf::sections::SectionData::Rela64(data)) => data,
@@ -288,7 +319,7 @@ impl MemorySet {
             info!("Relocating .rela.plt");
             for entry in data {
                 match entry.get_type() {
-                    5 => {
+                    R_LARCH_JUMP_SLOT => {
                         let dyn_sym = &dyn_sym_table[entry.get_symbol_table_index() as usize];
                         let sym_val = if dyn_sym.shndx() == 0 {
                             let name = dyn_sym.get_name(&elf).unwrap();
@@ -316,6 +347,24 @@ impl MemorySet {
                             );
                         }
                     }
+                    R_LARCH_IRELATIVE => {
+                        let value = base_addr + entry.get_addend() as usize;
+                        let addr = base_addr + entry.get_offset() as usize;
+                        let kaddr = self.get_map_virt(VirtAddr::from(addr)).unwrap().as_usize();
+                        warn!(
+                                "write: {:#x} @ {:#x} type = {}",
+                                value,
+                                addr,
+                                entry.get_type() as usize
+                            );
+                        unsafe {
+                            copy_nonoverlapping(
+                                value.to_ne_bytes().as_ptr(),
+                                kaddr as *mut u8,
+                                size_of::<usize>() / size_of::<u8>(),
+                            );
+                        }
+                    }
                     other => panic!("Unknown relocation type: {}", other),
                 }
             }
@@ -323,7 +372,6 @@ impl MemorySet {
 
         info!("Relocating done");
         self.entry = elf.header.pt2.entry_point() as usize + base_addr;
-
         let mut map = BTreeMap::new();
         map.insert(
             AT_PHDR,
@@ -333,6 +381,7 @@ impl MemorySet {
         map.insert(AT_PHNUM, elf.header.pt2.ph_count() as usize);
         map.insert(AT_RANDOM, 0);
         map.insert(AT_BASE, base_addr);
+        map.insert(AT_ENTRY, self.entry);
         map.insert(AT_PAGESZ, PAGE_SIZE_4K);
         map
     }
