@@ -52,6 +52,7 @@ pub fn fs_syscall(syscall_id: fs_syscall_id::FsSyscallId, args: [usize; 6]) -> S
             args[2] as *mut Kstat,
         ),
         STATFS => syscall_statfs(args[0] as *const u8, args[1] as *mut FsStat),
+        STATX => syscall_statx(args[0],args[1] as *const u8,args[2], args[3], args[4] as *mut Kstat),
         FCHMODAT => syscall_fchmodat(args[0] as usize, args[1] as *const u8, args[2] as usize),
         FACCESSAT => syscall_faccessat(args[0] as usize, args[1] as *const u8, args[2] as usize),
         LSEEK => syscall_lseek(args[0] as usize, args[1] as isize, args[2] as usize),

@@ -321,12 +321,14 @@ pub const OSTRAIN_TESTCASES: &[&str] = &[
 pub const SDCARD_TESTCASES: &[&str] = &[
     // "hello",
     "main",
+    // "./ld.so",
+    // "./lua sin30.lua"
     // "libc.so",
     // "busybox echo hello",
     // "busybox sh test_hello.sh",
     // "busybox sh busybox_testcode.sh",
     // "busybox ls",
-    "busybox sh",
+    // "busybox sh",
     // "./lmbench_all",
     // "./lmbench_all lat_syscall -P 1 null",
     // "./libc-bench",
@@ -515,30 +517,35 @@ pub fn fs_init(_case: &'static str) {
     // 需要对libc-dynamic进行特殊处理，因为它需要先加载libc.so
     // 建立一个硬链接
 
-    let libc_so  = &"ld-musl-loongarch64-sf.so.1";
+    // let libc_so  = &"ld-musl-loongarch64-sf.so.1";
+    // let libc_so2 = &"ld-musl-loongarch64.so.1"; // 另一种名字的 libc.so，非 libc-test 测例库用
     let libc_so1 = &"ld.so.1";
-    let libc_so2 = &"ld-musl-loongarch64.so.1"; // 另一种名字的 libc.so，非 libc-test 测例库用
 
-    create_link(
-        &(FilePath::new(("/lib/".to_string() + libc_so).as_str()).unwrap()),
-        &(FilePath::new("libc.so").unwrap()),
-    );
+    // create_link(
+    //     &(FilePath::new(("/lib/".to_string() + libc_so).as_str()).unwrap()),
+    //     &(FilePath::new("libc.so").unwrap()),
+    // );
 
     create_link(
         &(FilePath::new(("/lib64/".to_string() + libc_so1).as_str()).unwrap()),
+        &(FilePath::new("ld.so").unwrap()),
+    );
+
+    // create_link(
+    //     &(FilePath::new(("/lib/".to_string() + libc_so2).as_str()).unwrap()),
+    //     &(FilePath::new("libc.so").unwrap()),
+    // );
+
+    create_link(
+        &(FilePath::new("/lib/libc.so.6").unwrap()),
         &(FilePath::new("libc.so").unwrap()),
     );
 
-    create_link(
-        &(FilePath::new(("/lib/".to_string() + libc_so2).as_str()).unwrap()),
-        &(FilePath::new("libc.so").unwrap()),
-    );
-
-    let tls_so = &"tls_get_new-dtv_dso.so";
-    create_link(
-        &(FilePath::new(("/lib/".to_string() + tls_so).as_str()).unwrap()),
-        &(FilePath::new("tls_get_new-dtv_dso.so").unwrap()),
-    );
+    // let tls_so = &"tls_get_new-dtv_dso.so";
+    // create_link(
+    //     &(FilePath::new(("/lib/".to_string() + tls_so).as_str()).unwrap()),
+    //     &(FilePath::new("tls_get_new-dtv_dso.so").unwrap()),
+    // );
 
     // if case == "busybox" {
     create_link(

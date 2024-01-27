@@ -22,6 +22,7 @@ pub enum FsSyscallId {
     UNMOUNT = 39,
     MOUNT = 40,
     STATFS = 43,
+    STATX = 291,
     FTRUNCATE64 = 46,
     FACCESSAT = 48,
     CHDIR = 49,

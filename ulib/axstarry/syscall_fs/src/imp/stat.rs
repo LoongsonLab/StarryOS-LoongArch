@@ -76,3 +76,39 @@ pub fn syscall_statfs(path: *const u8, stat: *mut FsStat) -> SyscallResult {
         Err(SyscallError::EINVAL)
     }
 }
+
+/// 291
+/// 获取文件状态信息
+/// fd, path, flag, 0x7ff, &stx
+pub fn syscall_statx(fd: usize, _path: *const u8, _flags: usize, _statx_type: usize, stat: *mut Kstat) -> SyscallResult {
+    let process = current_process();
+    let fd_table = process.fd_manager.fd_table.lock();
+
+    if fd >= fd_table.len() || fd < 3 {
+        debug!("fd {} is out of range", fd);
+        return Err(SyscallError::EPERM);
+    }
+    if fd_table[fd].is_none() {
+        debug!("fd {} is none", fd);
+        return Err(SyscallError::EPERM);
+    }
+    let file = fd_table[fd].clone().unwrap();
+    if (file.get_type() != FileIOType::FileDesc) &&
+        (file.get_type() != FileIOType::DirDesc) {
+        debug!("fd {} is not a file or dir", fd);
+        return Err(SyscallError::EPERM);
+    }
+
+    match file.get_stat() {
+        Ok(kstat) => {
+            unsafe {
+                *stat = kstat;
+            }
+            Ok(0)
+        }
+        Err(e) => {
+            debug!("get stat error: {:?}", e);
+            Err(SyscallError::EPERM)
+        }
+    }
+}
