@@ -319,8 +319,8 @@ pub const OSTRAIN_TESTCASES: &[&str] = &[
 
 #[allow(dead_code)]
 pub const SDCARD_TESTCASES: &[&str] = &[
-    // "hello",
-    // "main",
+    // "./hello",
+    // "./main",
     // "./ld.so",
     // "./lua sin30.lua"
     // "libc.so",
@@ -519,12 +519,18 @@ pub fn fs_init(_case: &'static str) {
 
     // let libc_so  = &"ld-musl-loongarch64-sf.so.1";
     // let libc_so2 = &"ld-musl-loongarch64.so.1"; // 另一种名字的 libc.so，非 libc-test 测例库用
+    let libc_so = &"ld-linux-loongarch-lp64d.so.1";
     let libc_so1 = &"ld.so.1";
 
     // create_link(
     //     &(FilePath::new(("/lib/".to_string() + libc_so).as_str()).unwrap()),
     //     &(FilePath::new("libc.so").unwrap()),
     // );
+
+    create_link(
+        &(FilePath::new(("/lib64/".to_string() + libc_so).as_str()).unwrap()),
+        &(FilePath::new("ld.so").unwrap()),
+    );
 
     create_link(
         &(FilePath::new(("/lib64/".to_string() + libc_so1).as_str()).unwrap()),

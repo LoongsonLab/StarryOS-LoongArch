@@ -6,16 +6,23 @@ platform = "loongarch64-2k1000"
 family = "loongarch64-2k1000"
 
 # Base address of the whole physical memory.
-phys-memory-base = "0x0"
+phys-memory-base = "0x90000000"
 # Size of the whole physical memory.
-phys-memory-size = "0x800_0000"     # 128M
+phys-memory-size = "0x4000_0000"     # 128M
 # Base physical address of the kernel image.
-kernel-base-paddr = "0x0200_0000"
+kernel-base-paddr = "0x9200_0000"
 # Base virtual address of the kernel image.
-kernel-base-vaddr = "0x9000_0000_0200_0000"
+kernel-base-vaddr = "0x9000_0000_9200_0000"
 # Linear mapping offset, for quick conversions between physical and virtual
 # addresses.
 phys-virt-offset = "0x9000_0000_0000_0000"
+
+
+# Testcase memory(LA don't use this)
+testcase-memory-start = "0xA20C_0000"
+
+testcase-memory-size = "0x400_0000"    # 如果是要手动加载进来，认为镜像大小是64MB
+
 # MMIO regions with format (`base_paddr`, `size`).
 mmio-regions = [
     ["0x1800_0000", "0x0200_0000"],  # PCI memory ranges

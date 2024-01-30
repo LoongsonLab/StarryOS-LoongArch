@@ -24,7 +24,7 @@ use spinlock::SpinNoIrq;
 extern crate log;
 
 use axhal::{
-    mem::{memory_regions, phys_to_virt, PhysAddr, VirtAddr, PAGE_SIZE_4K},
+    mem::{PhysAddr, VirtAddr, PAGE_SIZE_4K},
     paging::{MappingFlags, PageSize, PageTable},
 };
 
@@ -102,8 +102,9 @@ impl MemorySet {
     pub fn new_with_kernel_mapped() -> Self {
         let mut page_table = PageTable::try_new().expect("Error allocating page table.");
 
+        #[cfg(not(target_arch = "loongarch64"))]
         for r in memory_regions() {
-            debug!(
+            warn!(
                 "mapping kernel region [0x{:x}, 0x{:x})",
                 usize::from(phys_to_virt(r.paddr)),
                 usize::from(phys_to_virt(r.paddr)) + r.size,
@@ -148,7 +149,6 @@ impl MemorySet {
         let magic = elf_header.pt1.magic;
         assert_eq!(magic, [0x7f, 0x45, 0x4c, 0x46], "invalid elf!");
 
-        // Some elf will load ELF Header (offset == 0) to vaddr 0. In that case, base_addr will be added to all the LOAD.
         let (base_addr, elf_header_vaddr): (usize, usize) = if let Some(header) = elf
             .program_iter()
             .find(|ph| ph.get_type() == Ok(xmas_elf::program::Type::Load) && ph.offset() == 0)
@@ -156,14 +156,25 @@ impl MemorySet {
             // Loading ELF Header into memory.
             let vaddr = header.virtual_addr() as usize;
 
+            let lsize = header.mem_size();
+            // get alligned address
+            let lsize_ff1 = ((1u64) << (63 - lsize.leading_zeros())) as usize;
+            let lsize_allign = self.map_allign(lsize as usize, lsize_ff1);
+            let laddr = self.find_free_area(4000000.into(), lsize_allign);
+
+            info!("Load Addr  : 0x{:x}", laddr.as_ref().unwrap());
+            info!("Load size  : 0x{:x}", lsize);
+            info!("Load allign: 0x{:x}", lsize_allign);
+
             if vaddr == 0 {
-                (0x400_0000, 0x400_0000)
+                (laddr.unwrap().as_usize(), laddr.unwrap().as_usize())
             } else {
                 (0, vaddr)
             }
         } else {
             (0, 0)
         };
+        // Some elf will load ELF Header (offset == 0) to vaddr 0. In that case, base_addr will be added to all the LOAD.
         info!("Base addr for the elf: 0x{:x}", base_addr);
 
         // Load Elf "LOAD" segments at base_addr.
@@ -510,9 +521,14 @@ impl MemorySet {
         }
     }
 
+    fn map_allign(&self, addr:usize, size:usize) -> usize {
+        ((addr + size-1) / size) * size
+    }
+
     pub fn find_free_area(&self, hint: VirtAddr, size: usize) -> Option<VirtAddr> {
         let mut last_end = hint.max(axconfig::USER_MEMORY_START.into()).as_usize();
-
+        let lsize_ff1 = ((1u64) << (63 - size.leading_zeros())) as usize;
+        let lsize_allign = self.map_allign(size, lsize_ff1);
         // TODO: performance optimization
         let mut segments: Vec<_> = self
             .owned_mem
@@ -532,12 +548,13 @@ impl MemorySet {
         let mut find_area: bool = false;
         let mut find_overlap: bool = false;
 
-        info!("Map Addr: 0x{:x?}", mmap_addr);
         info!("Map Segments: {:x?}", segments);
+        info!("Map Addr: 0x{:x} ,Size: 0x{:x}",hint.as_usize(), lsize_allign);
 
         for (start, end) in segments {
-            if mmap_addr <= end {
-                if !find_area && (last_end <= mmap_addr) && ((mmap_addr + size) < start) {
+            let mmap_addr_allign = self.map_allign(mmap_addr,lsize_allign);
+            if mmap_addr_allign <= end {
+                if !find_area && (last_end <= mmap_addr_allign) && ((mmap_addr_allign + lsize_allign) < start) {
                     find_overlap = false;
                     find_end = last_end;
                     find_area = true;
@@ -552,9 +569,13 @@ impl MemorySet {
             debug!("Map Overlap: 0x{:x?}", hint.as_usize());
         }
         if find_area {
-            return Some(find_end.into());
+            let mapp_addr_n =  self.map_allign(find_end, lsize_allign);
+            info!("Find Map Addr: 0x{:x} ,Size: 0x{:x}", mapp_addr_n, lsize_allign);
+            return Some(mapp_addr_n.into());
         } else if (mmap_addr+size) <= usize::MAX {
-            return Some(mmap_addr.into());
+            let mapp_addr_n =  self.map_allign(mmap_addr, lsize_allign);
+            info!("Find Map Addr: 0x{:x} ,Size: 0x{:x}", mapp_addr_n, lsize_allign);
+            return Some(mapp_addr_n.into());
         }
         None
     }
@@ -877,6 +898,7 @@ impl MemorySet {
     pub fn clone(&self) -> AxResult<Self> {
         let mut page_table = PageTable::try_new().expect("Error allocating page table.");
 
+        #[cfg(not(target_arch = "loongarch64"))]
         for r in memory_regions() {
             debug!(
                 "mapping kernel region [0x{:x}, 0x{:x})",
@@ -888,11 +910,6 @@ impl MemorySet {
                 .expect("Error mapping kernel memory");
         }
 
-        // let owned_mem = self
-        //     .owned_mem
-        //     .iter()
-        //     .map(|(vaddr, area)| (*vaddr, unsafe { area.clone_alloc(&mut page_table)? }))
-        //     .collect();
         let mut owned_mem: BTreeMap<usize, MapArea> = BTreeMap::new();
         for (vaddr, area) in self.owned_mem.iter() {
             unsafe {

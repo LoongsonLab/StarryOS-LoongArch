@@ -69,9 +69,10 @@ impl From<MappingFlags> for PTEFlags {
             return Self::empty();
         }
         let mut ret = Self::V;
-        if !f.contains(MappingFlags::READ) {
-            ret |= Self::NR;
-        }
+        // TODO: kernel crash when clone syscall copy data
+        // if !f.contains(MappingFlags::READ) {
+        //     ret |= Self::NR;
+        // }
         if f.contains(MappingFlags::WRITE) {
             ret |= Self::W;
         }

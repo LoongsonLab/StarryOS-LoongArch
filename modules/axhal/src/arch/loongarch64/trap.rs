@@ -1,5 +1,6 @@
 use super::context::TrapFrame;
 use loongarch64::register::estat::{self, Exception, Trap};
+use crate::arch::loongarch64::unaligned::emulate_load_store_insn;
 
 #[cfg(feature = "monolithic")]
 use super::enable_irqs;
@@ -24,13 +25,13 @@ core::arch::global_asm!(
     trapframe_size = const core::mem::size_of::<TrapFrame>(),
 );
 
+fn handle_unaligned(tf: &mut TrapFrame) {
+    unsafe { emulate_load_store_insn(tf) }
+}
+
 fn handle_breakpoint(era: &mut usize) {
     debug!("Exception(Breakpoint) @ {:#x} ", era);
     *era += 4;
-}
-
-fn dbg_break_point() {
-    // info!("dbg_break_point");
 }
 
 #[no_mangle]
@@ -47,12 +48,9 @@ fn loongarch64_trap_handler(tf: &mut TrapFrame, from_user: bool) {
         info!("Trap code: {:?}", estat.cause());
     }
 
-    // if from_user {
-    //     warn!("Trap tp  : 0x{:x}", tf.regs[2]);
-    // }
-    
     match estat.cause() {
         Trap::Exception(Exception::Breakpoint) => handle_breakpoint(&mut tf.era),
+        Trap::Exception(Exception::AddressNotAligned) => handle_unaligned(tf),
         Trap::Interrupt(_) => {
             let irq_num: usize = estat.is().trailing_zeros() as usize;
             crate::trap::handle_irq_extern(irq_num)
@@ -88,13 +86,8 @@ fn loongarch64_trap_handler(tf: &mut TrapFrame, from_user: bool) {
 
             info!("Syscall Exit");
             if syscall_num == 139 {
-                dbg_break_point();
-            }
-
-            if syscall_num == 139 {
                 info!("----Syscall return: 0x{:x}----", tf.era);
             }
-
             // cx is changed during sys_exec, so we have to call it again
             tf.regs[4] = result as usize;
         }
@@ -158,18 +151,36 @@ fn loongarch64_trap_handler(tf: &mut TrapFrame, from_user: bool) {
                 );
                 unimplemented!("PagePrivilegeIllegal from kernel");
             };
-            
             let flags = MappingFlags::USER;
-
             handle_page_fault(addr.into(), flags, tf);
         }
 
         #[cfg(feature = "monolithic")]
         Trap::Exception(Exception::InstructionNotExist) => {
-            let ip =  tf.era as u64;
-            let inst = unsafe {*((ip) as *mut u32)};
-            info!("Illegal Instruction: 0x{:x}, {:x}", ip, inst);
-            panic!("Exit")
+            /// NOTE:
+            /// this routine is for kernel signal return.
+            /// signal return trap pc is 0xffffff8000000000, when running on
+            /// Loongson 2K1000 board, will raise InstructionNotExist exception.
+            /// so, if epc is SIGNAL_RETURN_TRAP,
+            /// control enter handle_page_fault -> syscall_sigreturn and set era
+            /// otherwise will print exception info and kernel panic.
+
+            /// But, On Qemu(Machine: virt), this routine is unreachable.
+            /// Because when pc is 0xffffff8000000000, Qemu raise FetchPageFault
+            /// exception, also enter handle_page_fault handle.
+
+            pub const SIGNAL_RETURN_TRAP: usize = 0xFFFF_FF80_0000_0000;
+            let addr = tf.era;
+            if addr == SIGNAL_RETURN_TRAP {
+                // flags not used, ignored
+                let flags = MappingFlags::USER;
+                handle_page_fault(addr.into(), flags, tf);
+            } else {
+                let ip =  tf.era as u64;
+                let inst = unsafe {*((ip) as *mut u32)};
+                info!("Illegal Instruction: 0x{:x}, {:x}", ip, inst);
+                panic!("Exit")
+            }
         }
 
         _ => {

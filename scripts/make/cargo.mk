@@ -25,7 +25,7 @@ endif
 
 ifeq ($(ARCH),loongarch64)
   build_args += -Z build-std
-#   RUSTFLAGS  += -C target-feature=-ual
+  RUSTFLAGS  += -C target-feature=-ual
 endif
 
 ifeq ($(MAKECMDGOALS), doc_check_missing)

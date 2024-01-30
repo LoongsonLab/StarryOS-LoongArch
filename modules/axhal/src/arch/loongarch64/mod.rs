@@ -1,6 +1,7 @@
 #[macro_use]
 mod context;
 mod trap;
+mod unaligned;
 
 use core::arch::asm;
 use loongarch64::register::{crmd, ecfg, eentry, tlbidx, stlbps, pgd,
