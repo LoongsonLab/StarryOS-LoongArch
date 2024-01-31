@@ -15,7 +15,7 @@ use axprocess::{
 //     monolithic_task::task::{SchedPolicy, SchedStatus},
 //     AxTaskRef,
 // };
-use axlog::{info, warn};
+use axlog::{info};
 use axtask::TaskId;
 use syscall_utils::{SyscallError, SyscallResult};
 extern crate alloc;
@@ -220,7 +220,19 @@ pub fn syscall_clone3(
     let clone_flags = CloneFlags::from_bits((clone_args.flags & !0x3f) as u32).unwrap();
 
     let t_stack = (clone_args.stack + clone_args.stack_size) as usize;
-    let stack = if (clone_args.stack == 0) || (clone_args.stack_size == 0) {
+
+    // verify parameter valid
+    if clone_args.stack == 0 {
+        if clone_args.stack_size > 0 {
+            return Err(SyscallError::EINVAL);
+        }
+    } else {
+        if clone_args.stack_size == 0 {
+            return Err(SyscallError::EINVAL);
+        }
+    }
+
+    let stack = if clone_args.stack_size == 0 {
         None
     } else {
         info!("clone stack: 0x{:x}", t_stack);
