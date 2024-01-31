@@ -128,7 +128,7 @@ else ifeq ($(ARCH), loongarch64)
   SMP := 1
   TARGET := loongarch64-unknown-none
   PLATFORM_NAME ?= loongarch64-qemu-virt
-  PLATFORM_NAME := loongarch64-2k1000
+#   PLATFORM_NAME := loongarch64-2k1000
 #   MODE := debug
 else
   $(error "ARCH" must be one of "x86_64", "riscv64", or "aarch64", or "loongarch64")

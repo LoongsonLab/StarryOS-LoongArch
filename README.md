@@ -8,9 +8,7 @@
 
 在线文档详见：[Starry (azure-stars.github.io)](https://azure-stars.github.io/Starry/)
 
-## 成员
-
-陈嘉钰、郑友捷、王昱栋
+此分支是LoongArch64的移植版本，旨在LoongArch平台可以运行StarryOS。
 
 ## Usage
 
