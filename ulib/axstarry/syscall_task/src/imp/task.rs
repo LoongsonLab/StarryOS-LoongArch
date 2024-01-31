@@ -175,6 +175,68 @@ pub fn syscall_clone(
     }
 }
 
+#[cfg(target_arch = "loongarch64")]
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct clone_args
+{
+    /// Flags bit mask.
+    pub flags : u64,
+    /// Where to store PID file descriptor (pid_t *).
+    pub pidfd : u64,
+    /// Where to store child TID, in child's memory (pid_t *).
+    pub child_tid : u64,
+    /// Where to store child TID, in parent's memory (int *).
+    pub parent_tid : u64,
+    /// Signal to deliver to parent on child termination
+    pub exit_signal : u64,
+    /// The lowest address of stack.
+    pub stack : u64,
+    /// Size of stack.
+    pub stack_size : u64,
+    /// Location of new TLS.
+    pub tls : u64,
+    /// Pointer to a pid_t array (since Linux 5.5).
+    pub set_tid : u64,
+    /// Number of elements in set_tid (since Linux 5.5).
+    pub set_tid_size : u64,
+    /// File descriptor for target cgroup of child (since Linux 5.7).
+    pub cgroup : u64,
+}
+
+pub fn syscall_clone3(
+    clargs: usize,
+    _clsize: usize,
+    clfunc: usize,
+    clfunc_args: usize
+) -> SyscallResult {
+    let clone_args = clargs as *const clone_args;
+    let clone_args = (unsafe { *clone_args });
+    let clone_flags = CloneFlags::from_bits((clone_args.flags & !0x3f) as u32).unwrap();
+
+    let stack = if clone_args.stack == 0 {
+        None
+    } else {
+        Some(clone_args.stack as usize)
+    };
+
+    #[cfg(feature = "signal")]
+    let sig_child = SignalNo::from(clone_args.flags as usize & 0x3f) == SignalNo::SIGCHLD;
+
+    let curr_process = current_process();
+    if let Ok(new_task_id) = curr_process.clone_task(clone_flags, stack,
+        clone_args.parent_tid as usize,
+        clone_args.tls as usize,
+        clone_args.child_tid as usize,
+        #[cfg(feature = "signal")]
+        sig_child,
+    ) {
+        Ok(new_task_id as isize)
+    } else {
+        return Err(SyscallError::ENOMEM);
+    }
+}
+
 /// 等待子进程完成任务，若子进程没有完成，则自身yield
 /// 当前仅支持WNOHANG选项，即若未完成时则不予等待，直接返回0
 pub fn syscall_wait4(pid: isize, exit_code_ptr: *mut i32, option: WaitFlags) -> SyscallResult {

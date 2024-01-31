@@ -28,6 +28,7 @@ pub fn task_syscall(syscall_id: task_syscall_id::TaskSyscallId, args: [usize; 6]
         ),
         // (flags,user_stack,ptid,ctid,tls) => (flags,user_stack,ptid,tls,ctid)
         CLONE => syscall_clone(args[0], args[1], args[2], args[4], args[3]),
+        CLONE3 => syscall_clone3(args[0], args[1], args[2], args[4]),
         NANO_SLEEP => syscall_sleep(args[0] as *const TimeSecs, args[1] as *mut TimeSecs),
         SCHED_YIELD => syscall_yield(),
         TIMES => syscall_time(args[0] as *mut TMS),

@@ -12,7 +12,7 @@ pub const USER_STACK_SIZE: usize = 0x20_0000;
 use axerrno::AxResult;
 mod user_stack;
 use axhal::{mem::VirtAddr, paging::MappingFlags};
-use axlog::{info, trace, warn};
+use axlog::{info, trace};
 use axmem::MemorySet;
 use core::str::from_utf8;
 use xmas_elf::{program::SegmentData, ElfFile};
@@ -53,7 +53,7 @@ impl<'a> Loader<'a> {
     ) -> AxResult<(VirtAddr, VirtAddr, VirtAddr)> {
         info!("args: {:?}", args);
         // first load elf program
-        info!("Loader program");
+        info!("Load program");
         let auxv = memory_set.map_elf(&self.elf);
         // Allocate memory for user stack and hold it in memory_set
         // 栈顶为低地址，栈底为高地址
@@ -119,7 +119,8 @@ impl<'a> Loader<'a> {
             let interp = axfs::api::read(real_interp_path.as_str())
                 .expect("Error reading Interpreter from fs");
             let loader = Loader::new(&interp);
-            warn!("Loader interpreter");
+            
+            info!("Load interpreter");
             let interp_auxv = memory_set.map_elf(&loader.elf);
 
             const AT_ENTRY: u8 = 9;

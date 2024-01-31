@@ -38,6 +38,7 @@ pub enum TaskSyscallId {
     SYSINFO = 179,
     SOCKETPAIR = 199,
     CLONE = 220,
+    CLONE3 = 435,
     EXECVE = 221,
     MADVICE = 233,
     WAIT4 = 260,
