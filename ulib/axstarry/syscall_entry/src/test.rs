@@ -321,7 +321,7 @@ pub const OSTRAIN_TESTCASES: &[&str] = &[
 pub const SDCARD_TESTCASES: &[&str] = &[
     // "./hello",
     // "./main",
-    "./thread",
+    // "./thread",
     // "./ld.so",
     // "./lua sin30.lua"
     // "libc.so",
@@ -329,7 +329,7 @@ pub const SDCARD_TESTCASES: &[&str] = &[
     // "busybox sh test_hello.sh",
     // "busybox sh busybox_testcode.sh",
     // "busybox ls",
-    // "busybox sh",
+    "busybox sh",
     // "./lmbench_all",
     // "./lmbench_all lat_syscall -P 1 null",
     // "./libc-bench",

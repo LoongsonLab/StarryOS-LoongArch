@@ -15,7 +15,7 @@ use axprocess::{
 //     monolithic_task::task::{SchedPolicy, SchedStatus},
 //     AxTaskRef,
 // };
-use axlog::info;
+use axlog::{info, warn};
 use axtask::TaskId;
 use syscall_utils::{SyscallError, SyscallResult};
 extern crate alloc;
@@ -204,20 +204,27 @@ pub struct clone_args
     pub cgroup : u64,
 }
 
+/// clone3: stack size is not implemented, ignored it
+/// parameter <_clfunc> is a2 register saved into TrapFrame
+/// when syscall return, a2 register will restore origin(_clfunc)
+/// parameter <_clfunc_args> is same as _clfunc
+/// check detailedly glibc pthread_create and clone3 function.
 pub fn syscall_clone3(
     clargs: usize,
     _clsize: usize,
-    clfunc: usize,
-    clfunc_args: usize
+    _clfunc: usize,
+    _clfunc_args: usize
 ) -> SyscallResult {
     let clone_args = clargs as *const clone_args;
-    let clone_args = (unsafe { *clone_args });
+    let clone_args = unsafe { *clone_args };
     let clone_flags = CloneFlags::from_bits((clone_args.flags & !0x3f) as u32).unwrap();
 
-    let stack = if clone_args.stack == 0 {
+    let t_stack = (clone_args.stack + clone_args.stack_size) as usize;
+    let stack = if (clone_args.stack == 0) || (clone_args.stack_size == 0) {
         None
     } else {
-        Some(clone_args.stack as usize)
+        info!("clone stack: 0x{:x}", t_stack);
+        Some(t_stack)
     };
 
     #[cfg(feature = "signal")]
