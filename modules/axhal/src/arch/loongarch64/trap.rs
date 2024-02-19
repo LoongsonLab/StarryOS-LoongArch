@@ -37,16 +37,6 @@ fn handle_breakpoint(era: &mut usize) {
 #[no_mangle]
 fn loongarch64_trap_handler(tf: &mut TrapFrame, from_user: bool) {
     let estat = estat::read();
-    let _code = estat.ecode();
-    // if (estat.ecode() != 0) && (estat.ecode() == 0xb) {
-    if estat.ecode() != 0 {
-        info!("Trap era : 0x{:x}", tf.era);
-        info!("Trap badv: 0x{:x}", tf.badv);
-        info!("Trap sp  : 0x{:x}", tf.regs[3]);
-        info!("Trap ra  : 0x{:x}", tf.regs[1]);
-        info!("Trap tp  : 0x{:x}", tf.regs[2]);
-        info!("Trap code: {:?}", estat.cause());
-    }
 
     match estat.cause() {
         Trap::Exception(Exception::Breakpoint) => handle_breakpoint(&mut tf.era),
@@ -59,23 +49,14 @@ fn loongarch64_trap_handler(tf: &mut TrapFrame, from_user: bool) {
         #[cfg(feature = "monolithic")]
         Trap::Exception(Exception::Syscall) => {
             enable_irqs();
+            
             // jump to next instruction anyway
             tf.era += 4;
+            
             // get system call return value
             let syscall_num = tf.regs[11];
+            
             info!("Syscall num: {}", syscall_num);
-            // info!("Syscall tp : 0x{:x}", tf.regs[2]);
-            // info!("Syscall a5 : 0x{:x}", tf.regs[5]);
-            if syscall_num == 139 {
-                info!("----Syscall excpt: 0x{:x}----", tf.era);
-                info!("TrapFrame Addr: {:p}", &tf);
-            }
-
-            if syscall_num == 221 {
-                info!("execv syscal tf: 0x{:p}", tf);
-                info!("execv syscal a0: 0x{:x}", tf.regs[4]);
-                info!("execv syscal a1: 0x{:x}", tf.regs[5]);
-            }
 
             let result = handle_syscall(
                 tf.regs[11],
@@ -85,9 +66,7 @@ fn loongarch64_trap_handler(tf: &mut TrapFrame, from_user: bool) {
             );
 
             info!("Syscall Exit");
-            if syscall_num == 139 {
-                info!("----Syscall return: 0x{:x}----", tf.era);
-            }
+
             // cx is changed during sys_exec, so we have to call it again
             tf.regs[4] = result as usize;
         }

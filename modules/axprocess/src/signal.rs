@@ -98,10 +98,6 @@ fn terminate_process(signal: SignalNo) {
     }
 }
 
-pub fn dbg_test() {
-
-}
-
 /// 处理当前进程的信号
 ///
 /// 若返回值为真，代表需要进入处理信号，因此需要执行trap的返回
@@ -238,7 +234,6 @@ pub fn handle_signals() {
     info!("Trap_frame: 0x{:x}", trap_frame.regs[3]);
     drop(signal_handler);
     drop(signal_modules);
-    dbg_test();
 }
 
 /// 从信号处理函数返回

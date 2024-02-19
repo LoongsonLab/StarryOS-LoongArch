@@ -9,7 +9,7 @@ use axfs::api::{FileIO, OpenFlags};
 use axhal::arch::{write_page_table_root, TrapFrame};
 use axhal::mem::{phys_to_virt, VirtAddr};
 use axhal::KERNEL_PROCESS_ID;
-use axlog::{debug, error, info, warn};
+use axlog::{debug, error, info};
 use axmem::MemorySet;
 use axsync::Mutex;
 use axtask::{current, AxTaskRef, TaskId, TaskInner, RUN_QUEUE};
@@ -156,8 +156,7 @@ impl Process {
                 write_page_table_root(page_table_token.into());
                 let task = current();
                 info!("Cur Task: {}", task.id_name());
-                warn!("0x{:x}",page_table_token);
-                // riscv::register::sstatus::set_sum();
+                // warn!("0x{:x}",page_table_token);
             };
         }
         // 运行gcc程序时需要预先加载的环境变量

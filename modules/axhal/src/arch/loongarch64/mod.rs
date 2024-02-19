@@ -56,6 +56,7 @@ pub fn read_page_table_root() -> PhysAddr {
 /// # Safety
 ///
 /// This function is unsafe as it changes the virtual memory address space.
+#[inline(never)]
 pub fn write_page_table_root(root_paddr: PhysAddr) {
     let old_root = read_page_table_root();
     trace!("set page table root: {:#x} => {:#x}", old_root, root_paddr);
