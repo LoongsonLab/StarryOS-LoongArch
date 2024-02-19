@@ -56,6 +56,8 @@ pub fn read_page_table_root() -> PhysAddr {
 /// # Safety
 ///
 /// This function is unsafe as it changes the virtual memory address space.
+/// NOTE: Compiler optimize inline on release mode, kernel raise error about 
+/// page table. So we prohibit inline operation.
 #[inline(never)]
 pub fn write_page_table_root(root_paddr: PhysAddr) {
     let old_root = read_page_table_root();

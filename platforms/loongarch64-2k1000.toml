@@ -6,7 +6,7 @@ platform = "loongarch64-2k1000"
 family = "loongarch64-2k1000"
 
 # Base address of the whole physical memory.
-phys-memory-base = "0x90000000"
+phys-memory-base = "0x9000_0000"
 # Size of the whole physical memory.
 phys-memory-size = "0x4000_0000"     # 128M
 # Base physical address of the kernel image.
